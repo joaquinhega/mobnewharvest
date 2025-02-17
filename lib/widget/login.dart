@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'Home.dart';
+import '../utils/session_manager.dart';
 
 class Login extends StatefulWidget {
   @override
@@ -12,41 +14,51 @@ class _LoginState extends State<Login> {
   final TextEditingController _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
-  Future<void> _login() async {
-    if (!_formKey.currentState!.validate()) return;
+Future<void> _login() async {
+  if (!_formKey.currentState!.validate()) return;
 
-    final url = Uri.parse("http://10.0.2.2/newHarvestDes/Controller/loguear.php");
+  final url = Uri.parse("http://10.0.2.2/newHarvestDes/Controller/loguear.php");
 
-    final response = await http.post(
-      url,
-      body: {
-        'user': _userController.text, 
-        'pass': _passwordController.text,
-      },
-    );
+  final response = await http.post(
+    url,
+    body: {
+      'user': _userController.text,
+      'pass': _passwordController.text,
+    },
+  );
 
-    if (response.statusCode == 200) {
-      // Limpiar la respuesta para obtener solo el JSON
-      final responseBody = response.body.replaceAll(RegExp(r'^[^{]*'), '');
-      final data = jsonDecode(responseBody);
-      if (data['success'] == true) {
-        print("✅ Login exitoso: ${data['usuario']}");
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Login exitoso: ${data['usuario']}")),
-        );
-      } else {
-        print("❌ Credenciales incorrectas");
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Usuario o contraseña incorrectos")),
-        );
-      }
-    } else {
-      print("⚠️ Error en la conexión");
+  if (response.statusCode == 200) {
+    final responseBody = response.body.replaceAll(RegExp(r'^[^{]*'), '');
+    final data = jsonDecode(responseBody);
+    if (data['success'] == true) {
+      // Guardar la letra en la variable global
+      SessionManager.letra = data['letra'];
+
+      // Mostrar la letra en la terminal
+      print("📢 Letra obtenida: ${SessionManager.letra}");
+
+      // Mostrar mensaje en la pantalla
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error al conectar con el servidor")),
+        SnackBar(content: Text("Letra: ${SessionManager.letra}")),
+      );
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => HomeScreen()),
+      );
+    } else {
+      print("❌ Credenciales incorrectas");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Usuario o contraseña incorrectos")),
       );
     }
+  } else {
+    print("⚠️ Error en la conexión");
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Error al conectar con el servidor")),
+    );
   }
+}
 
   @override
   Widget build(BuildContext context) {
