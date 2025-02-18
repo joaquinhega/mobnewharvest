@@ -42,11 +42,15 @@ class _VoucherFormState extends State<VoucherForm> {
     void _nextStep() {
         if (_currentStep == 0 && _formKey.currentState!.validate()) {
             setState(() => _currentStep = 1);
+        } else if (_currentStep == 1) {
+            setState(() => _currentStep = 2);
         }
     }
 
     void _previousStep() {
-        setState(() => _currentStep = 0);
+        if (_currentStep > 0) {
+            setState(() => _currentStep -= 1);
+        }
     }
 
     Future<String> generarSiguienteRemito(String letraChofer) async {
@@ -55,12 +59,11 @@ class _VoucherFormState extends State<VoucherForm> {
         if (ultimoRemito != null && ultimoRemito.length > 1) {
             String numeroParte = ultimoRemito.substring(1);
             if (RegExp(r'^\d+$').hasMatch(numeroParte)) {
-            int numero = int.parse(numeroParte);
-            String nuevoRemito = letraChofer + (numero + 1).toString().padLeft(3, '0'); 
-            
-            return nuevoRemito;
+                int numero = int.parse(numeroParte);
+                String nuevoRemito = letraChofer + (numero + 1).toString().padLeft(3, '0'); 
+                return nuevoRemito;
             } else {
-            throw FormatException('Formato de remito incorrecto: $ultimoRemito');
+                throw FormatException('Formato de remito incorrecto: $ultimoRemito');
             }
         } else {
             return letraChofer + '001';
@@ -78,28 +81,22 @@ class _VoucherFormState extends State<VoucherForm> {
                 body: bodyData,
             );
 
-            print("📥 Respuesta recibida: ${response.body}");
-            print("🔢 Código de estado HTTP: ${response.statusCode}");
-
             if (response.statusCode == 200) {
-            // Limpiar la respuesta para obtener solo el JSON
-            final responseBody = response.body.replaceAll(RegExp(r'^[^{]*'), '');
-            final data = jsonDecode(responseBody);
-            print("📊 Datos decodificados: $data");
+                final responseBody = response.body.replaceAll(RegExp(r'^[^{]*'), '');
+                final data = jsonDecode(responseBody);
+                print("📊 Datos decodificados: $data");
 
-            if (data != null && data.containsKey('ultimo_remito')) {
-                print("✅ Último remito obtenido: ${data['ultimo_remito']}");
-                return data['ultimo_remito'];
+                if (data != null && data.containsKey('ultimo_remito')) {
+                    print("✅ Último remito obtenido: ${data['ultimo_remito']}");
+                    return data['ultimo_remito'];
+                } else {
+                    print("⚠️ Respuesta sin 'ultimo_remito': ${response.body}");
+                    return null;
+                }
             } else {
-                print("⚠️ Respuesta sin 'ultimo_remito': ${response.body}");
                 return null;
             }
-            } else {
-            print("❌ Error HTTP: ${response.statusCode} - ${response.body}");
-            return null;
-            }
         } catch (e) {
-            print("❌ Excepción al obtener último remito: $e");
             return null;
         }
     }
@@ -122,7 +119,7 @@ class _VoucherFormState extends State<VoucherForm> {
             signatureBase64 = 'data:image/png;base64,' + base64Encode(signatureBytes);
         }
 
-         final data = {
+        final data = {
             'remito': siguienteRemito,
             'fecha': fechaController.text,
             'empresa': empresaController.text,
@@ -152,17 +149,17 @@ class _VoucherFormState extends State<VoucherForm> {
                         context: context,
                         builder: (BuildContext context) {
                             return AlertDialog(
-                            title: Text('Éxito'),
-                            content: Text(responseBodyJson['message']),
-                            actions: <Widget>[
-                                TextButton(
-                                child: Text('Aceptar'),
-                                onPressed: () {
-                                    Navigator.of(context).pop(); // Cierra el dialog
-                                    _resetForm(); // Reinicia el formulario
-                                },
-                                ),
-                            ],
+                                title: Text('Éxito'),
+                                content: Text(responseBodyJson['message']),
+                                actions: <Widget>[
+                                    TextButton(
+                                        child: Text('Aceptar'),
+                                        onPressed: () {
+                                            Navigator.of(context).pop();
+                                            _resetForm();
+                                        },
+                                    ),
+                                ],
                             );
                         },
                     );
@@ -177,7 +174,7 @@ class _VoucherFormState extends State<VoucherForm> {
                                     TextButton(
                                         child: Text('Aceptar'),
                                         onPressed: () {
-                                            Navigator.of(context).pop(); // Cierra el dialog
+                                            Navigator.of(context).pop(); 
                                         },
                                     ),
                                 ],
@@ -196,7 +193,7 @@ class _VoucherFormState extends State<VoucherForm> {
                                 TextButton(
                                     child: Text('Aceptar'),
                                     onPressed: () {
-                                        Navigator.of(context).pop(); // Cierra el dialog
+                                        Navigator.of(context).pop(); 
                                     },
                                 ),
                             ],
@@ -215,7 +212,7 @@ class _VoucherFormState extends State<VoucherForm> {
                             TextButton(
                                 child: Text('Aceptar'),
                                 onPressed: () {
-                                    Navigator.of(context).pop(); // Cierra el dialog
+                                    Navigator.of(context).pop(); 
                                 },
                             ),
                         ],
@@ -242,6 +239,19 @@ class _VoucherFormState extends State<VoucherForm> {
         });
     }
 
+    void _clearForm() {
+        fechaController.clear();
+        empresaController.clear();
+        origenController.clear();
+        horaOrigenController.clear();
+        destinoController.clear();
+        horaDestinoController.clear();
+        tiempoEsperaController.clear();
+        observacionesController.clear();
+        nombrePasajeroController.clear();
+        _signatureController.clear();
+    }
+
     @override
     Widget build(BuildContext context) {
         return Padding(
@@ -251,11 +261,20 @@ class _VoucherFormState extends State<VoucherForm> {
                     if (_currentStep == 0) ...[
                         _buildStep1(),
                         SizedBox(height: 20),
-                        ElevatedButton(
-                        onPressed: _nextStep,
-                        child: Text("Siguiente"),
+                        Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                                ElevatedButton(
+                                    onPressed: _clearForm,
+                                    child: Text("Limpiar"),
+                                ),
+                                ElevatedButton(
+                                    onPressed: _nextStep,
+                                    child: Text("Siguiente"),
+                                ),
+                            ],
                         ),
-                    ] else ...[
+                    ] else if (_currentStep == 1) ...[
                         _buildStep2(),
                         Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -267,6 +286,21 @@ class _VoucherFormState extends State<VoucherForm> {
                                 TextButton(
                                     onPressed: _clearSignature,
                                     child: Text("Limpiar Firma", style: TextStyle(color: Colors.red)),
+                                ),
+                                ElevatedButton(
+                                    onPressed: _nextStep,
+                                    child: Text("Confirmar"),
+                                ),
+                            ],
+                        ),
+                    ] else if (_currentStep == 2) ...[
+                        _buildStep3(),
+                        Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                                TextButton(
+                                    onPressed: _previousStep,
+                                    child: Text("Volver", style: TextStyle(color: Colors.blue)),
                                 ),
                                 ElevatedButton(
                                     onPressed: _submitForm,
@@ -285,7 +319,28 @@ class _VoucherFormState extends State<VoucherForm> {
             key: _formKey,
             child: Column(
                 children: [
-                    TextFormField(controller: fechaController, decoration: InputDecoration(labelText: "Fecha"), validator: _validateField),
+                    TextFormField(
+                        controller: fechaController,
+                        decoration: InputDecoration(
+                            labelText: "Fecha",
+                            prefixIcon: Icon(Icons.calendar_today),
+                        ),
+                        readOnly: true,
+                        onTap: () async {
+                            DateTime? pickedDate = await showDatePicker(
+                                context: context,
+                                initialDate: DateTime.now(),
+                                firstDate: DateTime(2000),
+                                lastDate: DateTime(2100),
+                                locale: const Locale('es', 'ES'), // Establece el idioma en español
+                            );
+                            if (pickedDate != null) {
+                                String formattedDate = "${pickedDate.day}/${pickedDate.month}/${pickedDate.year}";
+                                fechaController.text = formattedDate; // Muestra la fecha en el campo
+                            }
+                        },
+                        validator: _validateField,
+                    ),
                     TextFormField(controller: empresaController, decoration: InputDecoration(labelText: "Empresa"), validator: _validateField),
                     TextFormField(controller: origenController, decoration: InputDecoration(labelText: "Origen"), validator: _validateField),
                     TextFormField(controller: horaOrigenController, decoration: InputDecoration(labelText: "Hora Origen"), validator: _validateField),
@@ -302,6 +357,32 @@ class _VoucherFormState extends State<VoucherForm> {
         return Column(
             children: [
                 TextFormField(controller: nombrePasajeroController, decoration: InputDecoration(labelText: "Nombre del Pasajero"), validator: _validateField),
+                SizedBox(height: 20),
+                Container(
+                    height: 200,
+                    decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey),
+                        borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Signature(controller: _signatureController, backgroundColor: Colors.white),
+                ),
+            ],
+        );
+    }
+
+    Widget _buildStep3() {
+        return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+                Text("Fecha: ${fechaController.text}"),
+                Text("Empresa: ${empresaController.text}"),
+                Text("Origen: ${origenController.text}"),
+                Text("Hora Origen: ${horaOrigenController.text}"),
+                Text("Destino: ${destinoController.text}"),
+                Text("Hora Destino: ${horaDestinoController.text}"),
+                Text("Tiempo de Espera: ${tiempoEsperaController.text}"),
+                Text("Observaciones: ${observacionesController.text}"),
+                Text("Nombre del Pasajero: ${nombrePasajeroController.text}"),
                 SizedBox(height: 20),
                 Container(
                     height: 200,
