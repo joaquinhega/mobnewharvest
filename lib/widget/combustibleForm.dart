@@ -137,7 +137,7 @@ class _CombustibleFormState extends State<CombustibleForm> {
               controller: fechaController,
               decoration: InputDecoration(
                 labelText: "Fecha",
-                prefixIcon: Icon(Icons.calendar_today),
+                prefixIcon: Icon(Icons.calendar_month),
               ),
               readOnly: true,
               onTap: () async {
