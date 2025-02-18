@@ -332,11 +332,11 @@ class _VoucherFormState extends State<VoucherForm> {
                                 initialDate: DateTime.now(),
                                 firstDate: DateTime(2000),
                                 lastDate: DateTime(2100),
-                                locale: const Locale('es', 'ES'), // Establece el idioma en español
+                                locale: const Locale('es', 'ES'),
                             );
                             if (pickedDate != null) {
-                                String formattedDate = "${pickedDate.day}/${pickedDate.month}/${pickedDate.year}";
-                                fechaController.text = formattedDate; // Muestra la fecha en el campo
+                                String formattedDate = "${pickedDate.year}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.day.toString().padLeft(2, '0')}";
+                                fechaController.text = formattedDate;
                             }
                         },
                         validator: _validateField,
