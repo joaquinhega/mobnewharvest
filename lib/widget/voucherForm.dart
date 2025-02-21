@@ -72,7 +72,7 @@ class _VoucherFormState extends State<VoucherForm> {
 
   Future<String?> obtenerUltimoRemito(String letraChofer) async {
     try {
-      final url = Uri.parse('http://10.0.2.2/newHarvestDes/Model/RemitoV.php');
+      final url = Uri.parse('http://10.0.2.2/newHarvestDes/api/RemitoV.php');
       final bodyData = jsonEncode({'letra_chofer': letraChofer});
 
       final response = await http.post(
@@ -94,9 +94,11 @@ class _VoucherFormState extends State<VoucherForm> {
           return null;
         }
       } else {
+        print("⚠️ Error en la respuesta del servidor: ${response.statusCode}");
         return null;
       }
     } catch (e) {
+      print("⚠️ Error al obtener el último remito: $e");
       return null;
     }
   }
@@ -110,7 +112,10 @@ class _VoucherFormState extends State<VoucherForm> {
     }
 
     String letraChofer = '${SessionManager.letra}';
+    print("📋 Letra del chofer: $letraChofer");
+
     String siguienteRemito = await generarSiguienteRemito(letraChofer);
+    print("📋 Siguiente remito: $siguienteRemito");
 
     final signatureBytes = await _signatureController.toPngBytes();
     String? signatureBase64;
@@ -120,7 +125,7 @@ class _VoucherFormState extends State<VoucherForm> {
     }
 
     final data = {
-      'remito': siguienteRemito,
+      'id_remito': siguienteRemito,
       'fecha': fechaController.text,
       'empresa': empresaController.text,
       'origen': origenController.text,
@@ -133,17 +138,20 @@ class _VoucherFormState extends State<VoucherForm> {
       'signature': signatureBase64,
     };
 
+    print("📤 Enviando datos: $data");
+
     try {
       final response = await http.post(
-        Uri.parse('http://10.0.2.2/newHarvestDes/Model/guardar_voucher.php'),
+        Uri.parse('http://10.0.2.2/newHarvestDes/api/guardarVoucher.php'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(data),
       );
 
+      print("📥 Respuesta del servidor: ${response.body}");
+
       if (response.statusCode == 200) {
         final responseBody = response.body.replaceAll(RegExp(r'^[^{]*'), '');
         final responseBodyJson = jsonDecode(responseBody);
-
         if (responseBodyJson['status'] == 'success') {
           showDialog(
             context: context,
@@ -409,7 +417,7 @@ class _VoucherFormState extends State<VoucherForm> {
         Text("Nombre del Pasajero: ${nombrePasajeroController.text}"),
         SizedBox(height: 20),
         Container(
-          height: 200,
+          height: 270,
           decoration: BoxDecoration(
             border: Border.all(color: Colors.grey),
             borderRadius: BorderRadius.circular(10),

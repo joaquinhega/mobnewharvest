@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 
 class Header extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return AppBar(
-      title: Text("Home"),
-      centerTitle: true,
-    );
-  }
+    final String title;
+
+    Header({required this.title});
+
+    @override
+    Widget build(BuildContext context) {
+        return AppBar(
+            title: Text(title),
+            centerTitle: true,
+        );
+    }
 }
