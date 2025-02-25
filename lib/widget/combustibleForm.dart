@@ -34,11 +34,11 @@ class _CombustibleFormState extends State<CombustibleForm> {
             url,
             headers: {'Content-Type': 'application/json'},
             body: jsonEncode({
-              'id_remito': remitoController.text,
-              'monto': montoController.text,
-              'patente': patenteController.text,
-              'fecha': fechaController.text,
-              'nombre': SessionManager.nombre,
+                'id_remito': remitoController.text,
+                'monto': montoController.text,
+                'patente': patenteController.text,
+                'fecha': fechaController.text,
+                'nombre': SessionManager.nombre,
             }),
         );
 
@@ -121,74 +121,122 @@ class _CombustibleFormState extends State<CombustibleForm> {
 
     @override
     Widget build(BuildContext context) {
-        return Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Form(
-                key: _formKey,
-                child: Column(
-                    children: [
-                        TextFormField(
-                            controller: remitoController,
-                            decoration: InputDecoration(
-                                labelText: "Número de Remito",
-                                prefixIcon: Icon(Icons.receipt),
-                            ),
-                            validator: _validateField,
-                        ),
-                        TextFormField(
-                            controller: fechaController,
-                            decoration: InputDecoration(
-                                labelText: "Fecha",
-                                prefixIcon: Icon(Icons.calendar_month),
-                            ),
-                            readOnly: true,
-                            onTap: () async {
-                                DateTime? pickedDate = await showDatePicker(
-                                    context: context,
-                                    initialDate: DateTime.now(),
-                                    firstDate: DateTime(2000),
-                                    lastDate: DateTime(2100),
-                                    locale: const Locale('es', 'ES'),
-                                );
-                                if (pickedDate != null) {
-                                    String formattedDate = "${pickedDate.year}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.day.toString().padLeft(2, '0')}";
-                                    fechaController.text = formattedDate;
-                                }
-                            },
-                            validator: _validateField,
-                        ),
-                        TextFormField(
-                            controller: montoController,
-                            decoration: InputDecoration(
-                                labelText: "Monto",
-                                prefixIcon: Icon(Icons.attach_money),
-                            ),
-                            validator: _validateField,
-                            keyboardType: TextInputType.number,
-                        ),
-                        TextFormField(
-                            controller: patenteController,
-                            decoration: InputDecoration(
-                                labelText: "Patente",
-                                prefixIcon: Icon(Icons.directions_car),
-                            ),
-                            validator: _validateField,
-                        ),
-                        SizedBox(height: 20),
-                        Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                                ElevatedButton(
-                                    onPressed: _clearForm,
-                                    child: Text("Limpiar"),
+        return Scaffold(
+            body: SingleChildScrollView(
+                child: Padding(
+                    padding: const EdgeInsets.all(20.0),
+                    child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                            SizedBox(height: 30),
+                            Form(
+                                key: _formKey,
+                                child: Column(
+                                    children: [
+                                        TextFormField(
+                                            controller: remitoController,
+                                            decoration: InputDecoration(
+                                                labelText: 'Número de Remito',
+                                                prefixIcon: Icon(Icons.receipt),
+                                                border: OutlineInputBorder(
+                                                    borderRadius: BorderRadius.circular(10),
+                                                ),
+                                            ),
+                                            validator: (value) =>
+                                                value!.isEmpty ? 'Ingrese el número de remito' : null,
+                                        ),
+                                        SizedBox(height: 15),
+                                        TextFormField(
+                                            controller: fechaController,
+                                            decoration: InputDecoration(
+                                                labelText: 'Fecha',
+                                                prefixIcon: Icon(Icons.calendar_month),
+                                                border: OutlineInputBorder(
+                                                    borderRadius: BorderRadius.circular(10),
+                                                ),
+                                            ),
+                                            readOnly: true,
+                                            onTap: () async {
+                                                DateTime? pickedDate = await showDatePicker(
+                                                    context: context,
+                                                    initialDate: DateTime.now(),
+                                                    firstDate: DateTime(2000),
+                                                    lastDate: DateTime(2100),
+                                                    locale: const Locale('es', 'ES'),
+                                                );
+                                                if (pickedDate != null) {
+                                                    String formattedDate = "${pickedDate.year}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.day.toString().padLeft(2, '0')}";
+                                                    fechaController.text = formattedDate;
+                                                }
+                                            },
+                                            validator: (value) =>
+                                                value!.isEmpty ? 'Ingrese la fecha' : null,
+                                        ),
+                                        SizedBox(height: 15),
+                                        TextFormField(
+                                            controller: montoController,
+                                            decoration: InputDecoration(
+                                                labelText: 'Monto',
+                                                prefixIcon: Icon(Icons.attach_money),
+                                                border: OutlineInputBorder(
+                                                    borderRadius: BorderRadius.circular(10),
+                                                ),
+                                            ),
+                                            validator: (value) =>
+                                                value!.isEmpty ? 'Ingrese el monto' : null,
+                                            keyboardType: TextInputType.number,
+                                        ),
+                                        SizedBox(height: 15),
+                                        TextFormField(
+                                            controller: patenteController,
+                                            decoration: InputDecoration(
+                                                labelText: 'Patente',
+                                                prefixIcon: Icon(Icons.directions_car),
+                                                border: OutlineInputBorder(
+                                                    borderRadius: BorderRadius.circular(10),
+                                                ),
+                                            ),
+                                            validator: (value) =>
+                                                value!.isEmpty ? 'Ingrese la patente' : null,
+                                        ),
+                                        SizedBox(height: 30),
+                                        Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                                ElevatedButton(
+                                                    onPressed: _clearForm,
+                                                    style: ElevatedButton.styleFrom(
+                                                        backgroundColor: Colors.grey,
+                                                        padding: EdgeInsets.symmetric(
+                                                            vertical: 12, horizontal: 30),
+                                                        shape: RoundedRectangleBorder(
+                                                            borderRadius: BorderRadius.circular(10),
+                                                        ),
+                                                    ),
+                                                    child: Text('Limpiar',
+                                                        style: TextStyle(color: Colors.white, fontSize: 16)),
+                                                ),
+                                                ElevatedButton(
+                                                    onPressed: _submitCombustible,
+                                                    style: ElevatedButton.styleFrom(
+                                                        backgroundColor: Colors.purple,
+                                                        padding: EdgeInsets.symmetric(
+                                                            vertical: 12, horizontal: 30),
+                                                        shape: RoundedRectangleBorder(
+                                                            borderRadius: BorderRadius.circular(10),
+                                                        ),
+                                                    ),
+                                                    child: Text('Enviar Combustible',
+                                                        style: TextStyle(color: Colors.white, fontSize: 16)),
+                                                ),
+                                            ],
+                                        ),
+                                    ],
                                 ),
-                                ElevatedButton(
-                                    onPressed: _submitCombustible,
-                                    child: Text("Enviar Combustible"),
-                                ),
-                            ],
-                        ),
-                    ],
+                            ),
+                            SizedBox(height: 40), // Espacio inferior
+                        ],
+                    ),
                 ),
             ),
         );
