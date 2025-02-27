@@ -1,19 +1,18 @@
 import 'package:flutter/material.dart';
-import 'header.dart';
-import 'voucherForm.dart';
-import 'combustibleForm.dart';
+import 'voucherCargados.dart';
+import 'combustibleCargados.dart';
 
-class HomeScreen extends StatefulWidget {
+class CargadosScreen extends StatefulWidget {
   final Function(int) onItemSelected;
   final int selectedIndex;
 
-  HomeScreen({required this.onItemSelected, required this.selectedIndex});
+  CargadosScreen({required this.onItemSelected, required this.selectedIndex});
 
   @override
-  _HomeScreenState createState() => _HomeScreenState();
+  _CargadosScreenState createState() => _CargadosScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _CargadosScreenState extends State<CargadosScreen> {
   bool isVoucherSelected = true;
 
   @override
@@ -29,12 +28,12 @@ class _HomeScreenState extends State<HomeScreen> {
               });
             },
             children: [
-              Padding(padding: EdgeInsets.all(10), child: Text("Voucher")),
-              Padding(padding: EdgeInsets.all(10), child: Text("Combustible")),
+              Padding(padding: EdgeInsets.all(10), child: Text("Vouchers")),
+              Padding(padding: EdgeInsets.all(10), child: Text("Combustibles")),
             ],
           ),
           Expanded(
-            child: isVoucherSelected ? VoucherForm() : CombustibleForm(),
+            child: isVoucherSelected ? VoucherCargados() : CombustibleCargados(),
           ),
         ],
       ),

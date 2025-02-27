@@ -2,7 +2,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:signature/signature.dart';
 import 'package:http/http.dart' as http;
-import '../utils/session_manager.dart';
+import '../db/database_helper.dart';
+import '../db/user.dart';
 
 class VoucherForm extends StatefulWidget {
   @override
@@ -29,6 +30,23 @@ class _VoucherFormState extends State<VoucherForm> {
     exportBackgroundColor: Colors.transparent,
   );
 
+  String letraChofer = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLetraChofer();
+  }
+
+  Future<void> _loadLetraChofer() async {
+    User? user = await DatabaseHelper().getLoggedInUser();
+    if (user != null) {
+      setState(() {
+        letraChofer = user.letra;
+      });
+    }
+  }
+
   @override
   void dispose() {
     _signatureController.dispose();
@@ -43,7 +61,15 @@ class _VoucherFormState extends State<VoucherForm> {
     if (_currentStep == 0 && _formKey.currentState!.validate()) {
       setState(() => _currentStep = 1);
     } else if (_currentStep == 1) {
-      setState(() => _currentStep = 2);
+      if (_formKey.currentState!.validate()) {
+        if (_signatureController.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Debe firmar')),
+          );
+          return;
+        }
+        setState(() => _currentStep = 2);
+      }
     }
   }
 
@@ -111,7 +137,6 @@ class _VoucherFormState extends State<VoucherForm> {
       return;
     }
 
-    String letraChofer = '${SessionManager.letra}';
     print("📋 Letra del chofer: $letraChofer");
 
     String siguienteRemito = await generarSiguienteRemito(letraChofer);
@@ -230,7 +255,7 @@ class _VoucherFormState extends State<VoucherForm> {
     }
   }
 
-  void _resetForm() {
+  void _clearAllFields() {
     fechaController.clear();
     empresaController.clear();
     origenController.clear();
@@ -241,297 +266,305 @@ class _VoucherFormState extends State<VoucherForm> {
     observacionesController.clear();
     nombrePasajeroController.clear();
     _signatureController.clear();
+  }
 
+  void _resetForm() {
+    _clearAllFields();
     setState(() {
       _currentStep = 0;
     });
   }
 
-  void _clearForm() {
-    fechaController.clear();
-    empresaController.clear();
-    origenController.clear();
-    horaOrigenController.clear();
-    destinoController.clear();
-    horaDestinoController.clear();
-    tiempoEsperaController.clear();
-    observacionesController.clear();
-    nombrePasajeroController.clear();
-    _signatureController.clear();
-  }
-@override
-Widget build(BuildContext context) {
+  @override
+  Widget build(BuildContext context) {
     return SingleChildScrollView(
-        child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-                children: [
-                    if (_currentStep == 0) ...[
-                        _buildStep1(),
-                        SizedBox(height: 20),
-                        Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                                ElevatedButton(
-                                    onPressed: _clearForm,
-                                    style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.grey,
-                                        padding: EdgeInsets.symmetric(
-                                            vertical: 12, horizontal: 30),
-                                        shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(10),
-                                        ),
-                                    ),
-                                    child: Text('Limpiar',
-                                        style: TextStyle(color: Colors.white, fontSize: 16)),
-                                ),
-                                ElevatedButton(
-                                    onPressed: _nextStep,
-                                    style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.purple,
-                                        padding: EdgeInsets.symmetric(
-                                            vertical: 12, horizontal: 30),
-                                        shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(10),
-                                        ),
-                                    ),
-                                    child: Text('Siguiente',
-                                        style: TextStyle(color: Colors.white, fontSize: 16)),
-                                ),
-                            ],
-                        ),
-                    ] else if (_currentStep == 1) ...[
-                        _buildStep2(),
-                        Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                                TextButton(
-                                    onPressed: _previousStep,
-                                    child: Text("Volver", style: TextStyle(color: Colors.blue)),
-                                ),
-                                TextButton(
-                                    onPressed: _clearSignature,
-                                    child: Text("Limpiar Firma", style: TextStyle(color: Colors.red)),
-                                ),
-                                ElevatedButton(
-                                    onPressed: _nextStep,
-                                    style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.purple,
-                                        padding: EdgeInsets.symmetric(
-                                            vertical: 12, horizontal: 30),
-                                        shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(10),
-                                        ),
-                                    ),
-                                    child: Text('Siguiente',
-                                        style: TextStyle(color: Colors.white, fontSize: 16)),
-                                ),
-                            ],
-                        ),
-                    ] else if (_currentStep == 2) ...[
-                        _buildStep3(),
-                        Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                                TextButton(
-                                    onPressed: _previousStep,
-                                    child: Text("Volver", style: TextStyle(color: Colors.blue)),
-                                ),
-                                ElevatedButton(
-                                    onPressed: _submitForm,
-                                    style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.purple,
-                                        padding: EdgeInsets.symmetric(
-                                            vertical: 12, horizontal: 30),
-                                        shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(10),
-                                        ),
-                                    ),
-                                    child: Text('Confirmar',
-                                        style: TextStyle(color: Colors.white, fontSize: 16)),
-                                ),
-                            ],
-                        ),
-                    ],
-                ],
-            ),
-        ),
-    );
-}
-Widget _buildStep1() {
-    return Form(
-        key: _formKey,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
         child: Column(
-            children: [
-                TextFormField(
-                    controller: fechaController,
-                    decoration: InputDecoration(
-                        labelText: "Fecha",
-                        prefixIcon: Icon(Icons.calendar_month),
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                        ),
-                    ),
-                    readOnly: true,
-                    onTap: () async {
-                        DateTime? pickedDate = await showDatePicker(
-                            context: context,
-                            initialDate: DateTime.now(),
-                            firstDate: DateTime(2000),
-                            lastDate: DateTime(2100),
-                            locale: const Locale('es', 'ES'),
-                        );
-                        if (pickedDate != null) {
-                            String formattedDate = "${pickedDate.year}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.day.toString().padLeft(2, '0')}";
-                            fechaController.text = formattedDate;
-                        }
-                    },
-                    validator: _validateField,
-                ),
-                SizedBox(height: 15),
-                TextFormField(
-                    controller: empresaController,
-                    decoration: InputDecoration(
-                        labelText: "Empresa",
-                        prefixIcon: Icon(Icons.business),
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                        ),
-                    ),
-                    validator: _validateField,
-                ),
-                SizedBox(height: 15),
-                TextFormField(
-                    controller: origenController,
-                    decoration: InputDecoration(
-                        labelText: "Origen",
-                        prefixIcon: Icon(Icons.where_to_vote_outlined),
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                        ),
-                    ),
-                    validator: _validateField,
-                ),
-                SizedBox(height: 15),
-                TextFormField(
-                    controller: horaOrigenController,
-                    decoration: InputDecoration(
-                        labelText: "Hora Origen",
-                        prefixIcon: Icon(Icons.access_time_outlined),
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                        ),
-                    ),
-                    validator: _validateField,
-                    keyboardType: TextInputType.number,
-                ),
-                SizedBox(height: 15),
-                TextFormField(
-                    controller: destinoController,
-                    decoration: InputDecoration(
-                        labelText: "Destino",
-                        prefixIcon: Icon(Icons.where_to_vote_rounded),
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                        ),
-                    ),
-                    validator: _validateField,
-                ),
-                SizedBox(height: 15),
-                TextFormField(
-                    controller: horaDestinoController,
-                    decoration: InputDecoration(
-                        labelText: "Hora Destino",
-                        prefixIcon: Icon(Icons.access_time_outlined),
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                        ),
-                    ),
-                    validator: _validateField,
-                    keyboardType: TextInputType.number,
-                ),
-                SizedBox(height: 15),
-                TextFormField(
-                    controller: tiempoEsperaController,
-                    decoration: InputDecoration(
-                        labelText: "Tiempo de Espera(min)(*)",
-                        prefixIcon: Icon(Icons.watch_off),
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                        ),
-                    ),
-                    keyboardType: TextInputType.number,
-                ),
-                SizedBox(height: 15),
-                TextFormField(
-                    controller: observacionesController,
-                    decoration: InputDecoration(
-                        labelText: "Observaciones(*)",
-                        prefixIcon: Icon(Icons.subject),
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                        ),
-                    ),
-                ),
-            ],
-        ),
-    );
-}
-
-Widget _buildStep2() {
-    return Column(
-        children: [
-            TextFormField(
-                controller: nombrePasajeroController,
-                decoration: InputDecoration(
-                    labelText: "Nombre del Pasajero",
-                    border: OutlineInputBorder(
+          children: [
+            if (_currentStep == 0) ...[
+              _buildStep1(),
+              SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  ElevatedButton(
+                    onPressed: _clearAllFields,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.grey,
+                      padding: EdgeInsets.symmetric(
+                        vertical: 12, horizontal: 30),
+                      shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
-                ),
-                validator: _validateField,
-            ),
-            SizedBox(height: 70),
-            Container(
-                height: 270,
-                decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey),
-                    borderRadius: BorderRadius.circular(10),
-                ),
-                child: Signature(controller: _signatureController, backgroundColor: Colors.white),
-            ),
-        ],
+                    child: Text('Limpiar',
+                      style: TextStyle(color: Colors.white, fontSize: 16)),
+                  ),
+                  ElevatedButton(
+                    onPressed: _nextStep,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.purple,
+                      padding: EdgeInsets.symmetric(
+                        vertical: 12, horizontal: 30),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: Text('Siguiente',
+                      style: TextStyle(color: Colors.white, fontSize: 16)),
+                  ),
+                ],
+              ),
+            ] else if (_currentStep == 1) ...[
+              _buildStep2(),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  TextButton(
+                    onPressed: _previousStep,
+                    child: Text("Volver", style: TextStyle(color: Colors.blue)),
+                  ),
+                  TextButton(
+                    onPressed: _clearSignature,
+                    child: Text("Limpiar Firma", style: TextStyle(color: Colors.red)),
+                  ),
+                  ElevatedButton(
+                    onPressed: _nextStep,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.purple,
+                      padding: EdgeInsets.symmetric(
+                        vertical: 12, horizontal: 30),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: Text('Siguiente',
+                      style: TextStyle(color: Colors.white, fontSize: 16)),
+                  ),
+                ],
+              ),
+            ] else if (_currentStep == 2) ...[
+              _buildStep3(),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  TextButton(
+                    onPressed: _previousStep,
+                    child: Text("Volver", style: TextStyle(color: Colors.blue)),
+                  ),
+                  ElevatedButton(
+                    onPressed: _submitForm,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.purple,
+                      padding: EdgeInsets.symmetric(
+                        vertical: 12, horizontal: 30),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: Text('Confirmar',
+                      style: TextStyle(color: Colors.white, fontSize: 16)),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
     );
-}
+  }
 
-Widget _buildStep3() {
-    return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildStep1() {
+    return Form(
+      key: _formKey,
+      child: Column(
         children: [
-            Text("Fecha: ${fechaController.text}"),
-            Text("Empresa: ${empresaController.text}"),
-            Text("Origen: ${origenController.text}"),
-            Text("Hora Origen: ${horaOrigenController.text}"),
-            Text("Destino: ${destinoController.text}"),
-            Text("Hora Destino: ${horaDestinoController.text}"),
-            Text("Tiempo de Espera: ${tiempoEsperaController.text}"),
-            Text("Observaciones: ${observacionesController.text}"),
-            Text("Nombre del Pasajero: ${nombrePasajeroController.text}"),
-            SizedBox(height: 20),
-            Container(
-                height: 270,
-                decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey),
-                    borderRadius: BorderRadius.circular(10),
-                ),
-                child: Signature(
-                    controller: _signatureController,
-                    backgroundColor: Colors.white,
-                ),
+          TextFormField(
+            controller: fechaController,
+            decoration: InputDecoration(
+              labelText: "Fecha",
+              prefixIcon: Icon(Icons.calendar_month),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
+            readOnly: true,
+            onTap: () async {
+              DateTime? pickedDate = await showDatePicker(
+                context: context,
+                initialDate: DateTime.now(),
+                firstDate: DateTime(2000),
+                lastDate: DateTime(2100),
+                locale: const Locale('es', 'ES'),
+              );
+              if (pickedDate != null) {
+                String formattedDate = "${pickedDate.year}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.day.toString().padLeft(2, '0')}";
+                fechaController.text = formattedDate;
+              }
+            },
+            validator: _validateField,
+          ),
+          SizedBox(height: 15),
+          TextFormField(
+            controller: origenController,
+            decoration: InputDecoration(
+              labelText: "Origen",
+              prefixIcon: Icon(Icons.where_to_vote_outlined),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            validator: _validateField,
+          ),
+          SizedBox(height: 15),
+          TextFormField(
+            controller: horaOrigenController,
+            decoration: InputDecoration(
+              labelText: "Hora Origen",
+              prefixIcon: Icon(Icons.access_time_outlined),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            validator: _validateField,
+            keyboardType: TextInputType.number,
+          ),
+          SizedBox(height: 15),
+          TextFormField(
+            controller: destinoController,
+            decoration: InputDecoration(
+              labelText: "Destino",
+              prefixIcon: Icon(Icons.where_to_vote_rounded),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            validator: _validateField,
+          ),
+          SizedBox(height: 15),
+          TextFormField(
+            controller: horaDestinoController,
+            decoration: InputDecoration(
+              labelText: "Hora Destino",
+              prefixIcon: Icon(Icons.access_time_outlined),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            validator: _validateField,
+            keyboardType: TextInputType.number,
+          ),
+          SizedBox(height: 15),
+          TextFormField(
+            controller: tiempoEsperaController,
+            decoration: InputDecoration(
+              labelText: "Tiempo de Espera(min)(*)",
+              prefixIcon: Icon(Icons.watch_off),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            keyboardType: TextInputType.number,
+          ),
+          SizedBox(height: 15),
+          TextFormField(
+            controller: observacionesController,
+            decoration: InputDecoration(
+              labelText: "Observaciones(*)",
+              prefixIcon: Icon(Icons.subject),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          ),
         ],
+      ),
     );
-}
+  }
+
+  Widget _buildStep2() {
+    return Form(
+      key: _formKey,
+      child: Column(
+        children: [
+          TextFormField(
+            controller: nombrePasajeroController,
+            decoration: InputDecoration(
+              labelText: "Nombre del Pasajero",
+              prefixIcon: Icon(Icons.person),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            validator: _validateField,
+          ),
+          SizedBox(height: 15),  
+          TextFormField(
+            controller: empresaController,
+            decoration: InputDecoration(
+              labelText: "Empresa",
+              prefixIcon: Icon(Icons.business),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            validator: _validateField,
+          ),
+          SizedBox(height: 45),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              "Firma: ",
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          SizedBox(height: 10),
+          Container(
+            height: 270,
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Signature(controller: _signatureController, backgroundColor: Colors.white),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStep3() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text("Fecha: ${fechaController.text}"),
+        Text("Origen: ${origenController.text}"),
+        Text("Hora Origen: ${horaOrigenController.text}"),
+        Text("Destino: ${destinoController.text}"),
+        Text("Hora Destino: ${horaDestinoController.text}"),
+        Text("Tiempo de Espera: ${tiempoEsperaController.text}"),
+        Text("Observaciones: ${observacionesController.text}"),
+        Text("Nombre del Pasajero: ${nombrePasajeroController.text}"),
+        Text("Empresa: ${empresaController.text}"),
+        SizedBox(height: 20),
+        Container(
+          height: 270,
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Signature(
+            controller: _signatureController,
+            backgroundColor: Colors.white,
+          ),
+        ),
+      ],
+    );
+  }
+
   String? _validateField(String? value) {
     return (value == null || value.isEmpty) ? 'Campo obligatorio' : null;
   }

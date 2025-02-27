@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:mobnewharvest/widget/Home.dart';
 import 'package:mobnewharvest/widget/dashboard.dart';
 import 'package:mobnewharvest/widget/login.dart';
+import 'package:sqflite/sqflite.dart';
 import 'db/database_helper.dart';
 import 'db/user.dart';
+import 'utils/connectivity_service.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  //await DatabaseHelper().deleteDatabase();
+  await DatabaseHelper().database; 
   runApp(MyApp());
+  ConnectivityService();
 }
 
 class MyApp extends StatelessWidget {

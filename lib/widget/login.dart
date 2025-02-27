@@ -36,22 +36,23 @@ class _LoginState extends State<Login> {
         final data = jsonDecode(response.body);
 
         if (data['success'] == true) {
-          SessionManager.user = data['user'];
-          SessionManager.letra = data['letra'];
-          SessionManager.rol = data['rol'];
-          SessionManager.nombre = data['nombre'];
+          SessionManager.saveUser(data['user']);
+          SessionManager.saveLetra(data['letra']);
+          SessionManager.saveRol(data['rol']);
+          SessionManager.saveNombre(data['nombre']);
 
-          print("📢 Letra obtenida: ${SessionManager.letra}");
-          print("📢 Usuario obtenido: ${SessionManager.user}");
+          print("📢 Letra obtenida: ${data['letra']}");
+          print("📢 Usuario obtenido: ${data['user']}");
+          print("📢 Rol obtenido: ${data['rol']}");
+          print("📢 Nombre obtenido: ${data['nombre']}");
 
-          // Guardar el usuario en la base de datos local
+          // Guardar o actualizar el usuario en la base de datos local
           User user = User(
             username: _userController.text,
             password: _passwordController.text,
             letra: data['letra'],
             nombre: data['nombre'],
           );
-          await DatabaseHelper().deleteUser(); // Eliminar cualquier usuario existente
           await DatabaseHelper().insertUser(user);
 
           Navigator.pushReplacement(
@@ -80,7 +81,7 @@ class _LoginState extends State<Login> {
       ),
     );
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

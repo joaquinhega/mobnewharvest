@@ -2,13 +2,15 @@ class Combustible {
   int? id;
   String fecha;
   double monto;
-  double patente;
+  String patente;
+  String nombre;
 
   Combustible({
     this.id,
     required this.fecha,
     required this.monto,
     required this.patente,
+    required this.nombre,
   });
 
   Map<String, dynamic> toMap() {
@@ -17,6 +19,7 @@ class Combustible {
       'fecha': fecha,
       'monto': monto,
       'patente': patente,
+      'nombre': nombre,
     };
   }
 
@@ -26,6 +29,7 @@ class Combustible {
       fecha: map['fecha'],
       monto: map['monto'],
       patente: map['patente'],
+      nombre: map['nombre'],
     );
   }
 }
