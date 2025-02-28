@@ -1,12 +1,12 @@
 class Combustible {
-  int? id;
+  String id;
   String fecha;
   double monto;
   String patente;
   String nombre;
 
   Combustible({
-    this.id,
+    required this.id,
     required this.fecha,
     required this.monto,
     required this.patente,
@@ -25,7 +25,7 @@ class Combustible {
 
   factory Combustible.fromMap(Map<String, dynamic> map) {
     return Combustible(
-      id: map['id'],
+      id: map['id'].toString(), // Asegúrate de que el id sea un String
       fecha: map['fecha'],
       monto: map['monto'],
       patente: map['patente'],

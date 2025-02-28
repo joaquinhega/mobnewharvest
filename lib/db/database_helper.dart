@@ -38,7 +38,7 @@ class DatabaseHelper {
     ''');
     await db.execute('''
       CREATE TABLE combustibles (
-        id INTEGER PRIMARY KEY,
+        id TEXT PRIMARY KEY,
         fecha TEXT,
         monto REAL,
         patente TEXT,
@@ -51,7 +51,7 @@ class DatabaseHelper {
     if (oldVersion < 2) {
       await db.execute('''
         CREATE TABLE IF NOT EXISTS combustibles (
-          id INTEGER PRIMARY KEY,
+          id TEXT PRIMARY KEY,
           fecha TEXT,
           monto REAL,
           patente TEXT,
@@ -128,7 +128,7 @@ class DatabaseHelper {
     });
   }
 
-  Future<void> deleteCombustible(int id) async {
+  Future<void> deleteCombustible(String id) async {
     final db = await database;
     await db.delete(
       'combustibles',

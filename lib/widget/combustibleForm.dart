@@ -45,50 +45,51 @@ class _CombustibleFormState extends State<CombustibleForm> {
     super.dispose();
   }
 
-  Future<void> _submitCombustible() async {
-    if (!_formKey.currentState!.validate()) return;
+Future<void> _submitCombustible() async {
+  if (!_formKey.currentState!.validate()) return;
 
-    final connectivityResult = await (Connectivity().checkConnectivity());
-    if (connectivityResult == ConnectivityResult.none) {
-      // No hay conexión a Internet, guardar en la base de datos local
-      final combustible = Combustible(
-        fecha: fechaController.text,
-        monto: double.parse(montoController.text),
-        patente: patenteController.text,
-        nombre: nombreChofer,
-      );
-      await DatabaseHelper().insertCombustible(combustible);
-      _showDialog('Éxito', 'Combustible guardado localmente.');
-    } else {
-      // Hay conexión a Internet, enviar al servidor
-      final url = Uri.parse("http://10.0.2.2/newHarvestDes/api/guardarCombustible.php");
+  final connectivityResult = await (Connectivity().checkConnectivity());
+  if (connectivityResult == ConnectivityResult.none) {
+    // No hay conexión a Internet, guardar en la base de datos local
+    final combustible = Combustible(
+      id: remitoController.text,
+      fecha: fechaController.text,
+      monto: double.parse(montoController.text),
+      patente: patenteController.text,
+      nombre: nombreChofer,
+    );
+    await DatabaseHelper().insertCombustible(combustible);
+    _showDialog('Éxito', 'Combustible guardado localmente.');
+  } else {
+    // Hay conexión a Internet, enviar al servidor
+    final url = Uri.parse("http://10.0.2.2/newHarvestDes/api/guardarCombustible.php");
 
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'id_remito': remitoController.text,
-          'monto': montoController.text,
-          'patente': patenteController.text,
-          'fecha': fechaController.text,
-          'nombre': nombreChofer,
-        }),
-      );
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'id_remito_c': remitoController.text,
+        'monto': montoController.text,
+        'patente': patenteController.text,
+        'fecha': fechaController.text,
+        'nombre': nombreChofer,
+      }),
+    );
 
-      if (response.statusCode == 200) {
-        final responseBody = response.body.replaceAll(RegExp(r'^[^{]*'), '');
-        final responseBodyJson = jsonDecode(responseBody);
+    if (response.statusCode == 200) {
+      final responseBody = response.body.replaceAll(RegExp(r'^[^{]*'), '');
+      final responseBodyJson = jsonDecode(responseBody);
 
-        if (responseBodyJson['status'] == 'success') {
-          _showDialog('Éxito', responseBodyJson['message']);
-        } else {
-          _showDialog('Error', 'Error al guardar el combustible: ${responseBodyJson['message']}');
-        }
+      if (responseBodyJson['status'] == 'success') {
+        _showDialog('Éxito', responseBodyJson['message']);
       } else {
-        _showDialog('Error', 'Error al enviar el combustible: ${response.body}');
+        _showDialog('Error', 'Error al guardar el combustible: ${responseBodyJson['message']}');
       }
+    } else {
+      _showDialog('Error', 'Error al enviar el combustible: ${response.body}');
     }
   }
+}
 
   void _showDialog(String title, String message) {
     showDialog(

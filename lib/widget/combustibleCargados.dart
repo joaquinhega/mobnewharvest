@@ -93,7 +93,7 @@ class _CombustibleCargadosState extends State<CombustibleCargados> {
             final responseBodyJson = jsonDecode(responseBody);
 
             if (responseBodyJson['status'] == 'success') {
-              await DatabaseHelper().deleteCombustible(combustible.id!);
+              await DatabaseHelper().deleteCombustible(combustible.id);
             } else {
               print('Error al guardar el combustible: ${responseBodyJson['message']}');
             }
@@ -110,36 +110,6 @@ class _CombustibleCargadosState extends State<CombustibleCargados> {
     setState(() {
       _localRemitosFuture = fetchLocalRemitos();
     });
-  }
-
-  Future<void> _showUploadConfirmationDialog() async {
-    List<Combustible> pendingCombustibles = await DatabaseHelper().getPendingCombustibles();
-    int count = pendingCombustibles.length;
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Confirmación'),
-          content: Text('Estás por cargar $count remitos. ¿Estás seguro?'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text('Cancelar'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                _uploadLocalRemitos();
-              },
-              child: Text('Aceptar'),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   Future<void> _editRemito(dynamic remito) async {
@@ -233,27 +203,28 @@ class _CombustibleCargadosState extends State<CombustibleCargados> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Combustible Cargados'),
-        actions: [
-          Switch(
-            value: _showLocal,
-            onChanged: (value) {
-              setState(() {
-                _showLocal = value;
-              });
-            },
-            activeColor: Colors.white,
-          ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Text(
-              _showLocal ? 'Local' : 'Servidor',
-              style: TextStyle(color: Colors.white),
+        appBar: AppBar(
+        centerTitle: true,
+        title: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+            Icon(Icons.cloud, color: const Color.fromARGB(255, 0, 0, 0)),
+            SizedBox(width: 70),
+            Switch(
+                value: _showLocal,
+                onChanged: (value) {
+                    setState(() {
+                        _showLocal = value;
+                    });
+                },
+                activeColor: const Color.fromARGB(255, 0, 0, 0),
             ),
-          ),
-        ],
-      ),
+            SizedBox(width: 70),
+            Icon(Icons.phone_android, color: const Color.fromARGB(255, 0, 0, 0)), 
+            ],
+        ),
+    ),
+
       body: _showLocal ? _buildLocalRemitos() : _buildServerRemitos(),
       floatingActionButton: _showLocal && _isConnected
           ? FloatingActionButton(
@@ -264,6 +235,7 @@ class _CombustibleCargadosState extends State<CombustibleCargados> {
           : null,
     );
   }
+
 
   Widget _buildServerRemitos() {
     return FutureBuilder<List<dynamic>>(
@@ -400,7 +372,7 @@ class _CombustibleCargadosState extends State<CombustibleCargados> {
                       ],
                       rows: visibleRemitos.map((remito) {
                         return DataRow(cells: [
-                          DataCell(Text(remito.id.toString())),
+                          DataCell(Text(remito.id)),
                           DataCell(Text(remito.monto.toString())),
                           DataCell(Text(remito.fecha)),
                           DataCell(Text(remito.patente)),
@@ -437,6 +409,36 @@ class _CombustibleCargadosState extends State<CombustibleCargados> {
             ],
           );
         }
+      },
+    );
+  }
+
+  Future<void> _showUploadConfirmationDialog() async {
+    List<Combustible> pendingCombustibles = await DatabaseHelper().getPendingCombustibles();
+    int count = pendingCombustibles.length;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Confirmación'),
+          content: Text('Estás por cargar $count remitos. ¿Estás seguro?'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _uploadLocalRemitos();
+              },
+              child: Text('Aceptar'),
+            ),
+          ],
+        );
       },
     );
   }
