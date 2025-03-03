@@ -41,12 +41,6 @@ class _LoginState extends State<Login> {
           SessionManager.saveRol(data['rol']);
           SessionManager.saveNombre(data['nombre']);
 
-          print("📢 Letra obtenida: ${data['letra']}");
-          print("📢 Usuario obtenido: ${data['user']}");
-          print("📢 Rol obtenido: ${data['rol']}");
-          print("📢 Nombre obtenido: ${data['nombre']}");
-
-          // Guardar o actualizar el usuario en la base de datos local
           User user = User(
             username: _userController.text,
             password: _passwordController.text,
@@ -67,7 +61,6 @@ class _LoginState extends State<Login> {
       }
     } catch (e) {
       _showSnackbar("Error al procesar la respuesta del servidor", Colors.red);
-      print("Error al decodificar la respuesta JSON: $e");
     }
   }
 
@@ -142,7 +135,7 @@ class _LoginState extends State<Login> {
                     ElevatedButton(
                       onPressed: _login,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.purple,
+                        backgroundColor: Color.fromARGB(255, 123, 31, 162),
                         padding: EdgeInsets.symmetric(
                             vertical: 12, horizontal: 30),
                         shape: RoundedRectangleBorder(

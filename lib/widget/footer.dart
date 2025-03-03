@@ -17,15 +17,15 @@ class _FooterState extends State<Footer> {
   Widget build(BuildContext context) {
     return CurvedNavigationBar(
       backgroundColor: Colors.white,
-      color: Colors.purple,
-      buttonBackgroundColor: Colors.purple,
+      color: Color.fromARGB(255, 156, 39, 176),
+      buttonBackgroundColor: const Color.fromARGB(255, 156, 39, 176),
       animationDuration: Duration(milliseconds: 300),
-      height: 60,
+      height: 70,
       index: widget.selectedIndex,
       items: <Widget>[
-        Icon(Icons.list, size: 30, color: Colors.black),
-        Icon(Icons.home, size: 30, color: Colors.black),
-        Icon(Icons.logout, size: 30, color: Colors.black),
+        Icon(Icons.list, size: 30, color: const Color.fromARGB(255, 255, 255, 255)),
+        Icon(Icons.home, size: 30, color: const Color.fromARGB(255, 255, 255, 255)),
+        Icon(Icons.logout, size: 30, color: const Color.fromARGB(255, 255, 255, 255)),
       ],
       onTap: (index) {
         if (index == 2) {

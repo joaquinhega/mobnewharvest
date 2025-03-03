@@ -60,7 +60,6 @@ class _HeaderState extends State<Header> {
                     ? Colors.red
                     : Colors.green,
               ),
-              SizedBox(width: 5),
               Text(
                 _connectionStatus == ConnectivityResult.none ? "Sin conexión" : "Conectado",
                 style: TextStyle(color: Colors.white),

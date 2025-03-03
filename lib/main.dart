@@ -2,54 +2,52 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:mobnewharvest/widget/dashboard.dart';
 import 'package:mobnewharvest/widget/login.dart';
-import 'package:sqflite/sqflite.dart';
 import 'db/database_helper.dart';
 import 'db/user.dart';
 import 'utils/connectivity_service.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  //await DatabaseHelper().deleteDatabase();
-  await DatabaseHelper().database; 
-  runApp(MyApp());
-  ConnectivityService();
+    WidgetsFlutterBinding.ensureInitialized();
+    await DatabaseHelper().database; 
+    runApp(MyApp());
+    ConnectivityService();
 }
 
 class MyApp extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'App de Vouchers',
-      theme: ThemeData(
-        primarySwatch: Colors.purple,
-      ),
-      locale: const Locale('es', 'ES'),
-      supportedLocales: const [
-        Locale('es', 'ES'),
-        Locale('en', 'US'),
-      ],
-      localizationsDelegates: [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      home: FutureBuilder<User?>(
-        future: _getLoggedInUser(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasData && snapshot.data != null) {
-            return Dashboard();
-          } else {
-            return Login();
-          }
-        },
-      ),
-    );
-  }
+    @override
+    Widget build(BuildContext context) {
+          return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          title: 'App de Vouchers',
+          theme: ThemeData(
+              primarySwatch: Colors.purple,
+          ),
+          locale: const Locale('es', 'ES'),
+          supportedLocales: const [
+              Locale('es', 'ES'),
+              Locale('en', 'US'),
+          ],
+          localizationsDelegates: [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+          ],
+          home: FutureBuilder<User?>(
+              future: _getLoggedInUser(),
+              builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Center(child: CircularProgressIndicator());
+              } else if (snapshot.hasData && snapshot.data != null) {
+                  return Dashboard();
+              } else {
+                  return Login();
+              }
+              },
+          ),
+        );
+    }
 
-  Future<User?> _getLoggedInUser() async {
-    return await DatabaseHelper().getLoggedInUser();
-  }
+    Future<User?> _getLoggedInUser() async {
+        return await DatabaseHelper().getLoggedInUser();
+    }
 }

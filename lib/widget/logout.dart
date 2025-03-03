@@ -5,8 +5,8 @@ import '../db/database_helper.dart';
 
 class LogoutService {
   static Future<void> _logout(BuildContext context) async {
-    final navigator = Navigator.of(context); // Guardar referencia antes de async
-    final scaffoldMessenger = ScaffoldMessenger.of(context); // Evita usar contexto destruido
+    final navigator = Navigator.of(context); 
+    final scaffoldMessenger = ScaffoldMessenger.of(context); 
 
     final url = Uri.parse("http://10.0.2.2/newHarvestDes/Controller/cerrarSesion.php");
     try {
@@ -14,18 +14,14 @@ class LogoutService {
       if (response.statusCode == 200) {
         print("✅ Sesión cerrada correctamente");
 
-        // Eliminar usuario de la base de datos local
         await DatabaseHelper().deleteUser();
 
-        // Mostrar un mensaje de confirmación
         scaffoldMessenger.showSnackBar(
           SnackBar(content: Text("Sesión cerrada correctamente")),
         );
 
-        // Esperar un breve momento para que el SnackBar se muestre
         await Future.delayed(Duration(seconds: 1));
 
-        // Navegar a la pantalla de login
         navigator.pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => Login()),
           (route) => false,

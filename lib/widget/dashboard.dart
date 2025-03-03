@@ -4,7 +4,7 @@ import 'dart:async';
 import 'Home.dart';
 import 'footer.dart';
 import 'header.dart';
-import 'cargadosScreen.dart'; // Asegúrate de importar el archivo correcto
+import 'cargadosScreen.dart';
 
 class Dashboard extends StatefulWidget {
   @override
@@ -55,7 +55,7 @@ class _DashboardState extends State<Dashboard> {
 
   @override
   Widget build(BuildContext context) {
-    String appBarTitle = _selectedIndex == 0 ? "Vouchers Cargados" : "Formularios";
+    String appBarTitle = _selectedIndex == 0 ? "Registros Cargados" : "Formularios";
 
     return Scaffold(
       appBar: PreferredSize(

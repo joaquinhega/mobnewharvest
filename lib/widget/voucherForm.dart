@@ -2,8 +2,12 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:signature/signature.dart';
 import 'package:http/http.dart' as http;
+import 'package:connectivity_plus/connectivity_plus.dart'; 
 import '../db/database_helper.dart';
 import '../db/user.dart';
+import '../db/voucher_dao.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 
 class VoucherForm extends StatefulWidget {
   @override
@@ -31,6 +35,7 @@ class _VoucherFormState extends State<VoucherForm> {
   );
 
   String letraChofer = '';
+  String? signaturePath;
 
   @override
   void initState() {
@@ -79,180 +84,188 @@ class _VoucherFormState extends State<VoucherForm> {
     }
   }
 
-  Future<String> generarSiguienteRemito(String letraChofer) async {
-    String? ultimoRemito = await obtenerUltimoRemito(letraChofer);
-
-    if (ultimoRemito != null && ultimoRemito.length > 1) {
-      String numeroParte = ultimoRemito.substring(1);
-      if (RegExp(r'^\d+$').hasMatch(numeroParte)) {
-        int numero = int.parse(numeroParte);
-        String nuevoRemito = letraChofer + (numero + 1).toString().padLeft(3, '0');
-        return nuevoRemito;
+  Future<String> generarSiguienteRemito() async {
+    final connectivityResult = await Connectivity().checkConnectivity();
+    
+    if (connectivityResult == ConnectivityResult.none) {
+      // Si no hay conexión, generar un ID temporal incremental
+      String? ultimoRemito = await obtenerUltimoRemitoLocal();
+      if (ultimoRemito != null) {
+        int numero = int.parse(ultimoRemito) + 1;
+        return numero.toString();
       } else {
-        throw FormatException('Formato de remito incorrecto: $ultimoRemito');
+        return '1'; // Comienza con 1 si no hay remitos registrados
       }
     } else {
-      return letraChofer + '001';
+      // Si hay conexión, obtener el último remito desde el servidor
+      String? ultimoRemito = await obtenerUltimoRemito(letraChofer);
+      if (ultimoRemito != null && ultimoRemito.length > 1) {
+        String numeroParte = ultimoRemito.substring(1);
+        if (RegExp(r'^\d+$').hasMatch(numeroParte)) {
+          int numero = int.parse(numeroParte);
+          String nuevoRemito = (numero + 1).toString().padLeft(3, '0');
+          return letraChofer + nuevoRemito; // Devuelve la letra del chofer con el número incrementado
+        } else {
+          throw FormatException('Formato de remito incorrecto: $ultimoRemito');
+        }
+      } else {
+        return letraChofer + '001';
+      }
     }
   }
 
   Future<String?> obtenerUltimoRemito(String letraChofer) async {
-    try {
-      final url = Uri.parse('http://10.0.2.2/newHarvestDes/api/RemitoV.php');
-      final bodyData = jsonEncode({'letra_chofer': letraChofer});
+      try {
+        final url = Uri.parse('http://10.0.2.2/newHarvestDes/api/RemitoV.php');
+        final bodyData = jsonEncode({'letra_chofer': letraChofer});
 
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: bodyData,
-      );
+        final response = await http.post(
+          url,
+          headers: {'Content-Type': 'application/json'},
+          body: bodyData,
+        );
 
-      if (response.statusCode == 200) {
-        final responseBody = response.body.replaceAll(RegExp(r'^[^{]*'), '');
-        final data = jsonDecode(responseBody);
-        print("📊 Datos decodificados: $data");
-
-        if (data != null && data.containsKey('ultimo_remito')) {
-          print("✅ Último remito obtenido: ${data['ultimo_remito']}");
-          return data['ultimo_remito'];
+        if (response.statusCode == 200) {
+          final responseBody = response.body.replaceAll(RegExp(r'^[^{]*'), '');
+          final data = jsonDecode(responseBody);
+          if (data != null && data.containsKey('ultimo_remito')) {
+            return data['ultimo_remito'];
+          } else {
+            return null;
+          }
         } else {
-          print("⚠️ Respuesta sin 'ultimo_remito': ${response.body}");
           return null;
         }
-      } else {
-        print("⚠️ Error en la respuesta del servidor: ${response.statusCode}");
+      } catch (e) {
         return null;
       }
+  }
+  
+  Future<String?> obtenerUltimoRemitoLocal() async {
+    try {
+      final db = await DatabaseHelper().database;
+      final result = await db.query(
+        'vouchers', // Asegúrate de que la tabla es 'vouchers'
+        orderBy: 'id DESC',
+        limit: 1,
+      );
+
+      if (result.isNotEmpty) {
+        final lastVoucher = result.first;
+        String lastRemito = lastVoucher['id'].toString(); // Convertir a String
+        return lastRemito; 
+      }
+      return null; // Si no hay remitos registrados, retorna null
     } catch (e) {
-      print("⚠️ Error al obtener el último remito: $e");
       return null;
     }
   }
 
+  Future<void> _saveSignature() async {
+      final directory = await getApplicationDocumentsDirectory();
+      final path = '${directory.path}/signature_${DateTime.now().millisecondsSinceEpoch}.png';
+      final file = File(path);
+      final signatureBytes = await _signatureController.toPngBytes();
+      if (signatureBytes != null) {
+        await file.writeAsBytes(signatureBytes);
+        setState(() {
+          signaturePath = path;
+        });
+      }
+    }
+
   Future<void> _submitForm() async {
-    if (nombrePasajeroController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Debe ingresar el nombre del pasajero')),
-      );
-      return;
-    }
+      if (nombrePasajeroController.text.isEmpty) {
+        return;
+      }
 
-    print("📋 Letra del chofer: $letraChofer");
+      String siguienteRemito = await generarSiguienteRemito();
 
-    String siguienteRemito = await generarSiguienteRemito(letraChofer);
-    print("📋 Siguiente remito: $siguienteRemito");
+      await _saveSignature();
 
-    final signatureBytes = await _signatureController.toPngBytes();
-    String? signatureBase64;
-
-    if (signatureBytes != null) {
-      signatureBase64 = 'data:image/png;base64,' + base64Encode(signatureBytes);
-    }
-
-    final data = {
-      'id_remito': siguienteRemito,
-      'fecha': fechaController.text,
-      'empresa': empresaController.text,
-      'origen': origenController.text,
-      'hora_origen': horaOrigenController.text,
-      'destino': destinoController.text,
-      'hora_destino': horaDestinoController.text,
-      'tiempo_espera': tiempoEsperaController.text,
-      'observaciones': observacionesController.text,
-      'nombre_pasajero': nombrePasajeroController.text,
-      'signature': signatureBase64,
-    };
-
-    print("📤 Enviando datos: $data");
-
-    try {
-      final response = await http.post(
-        Uri.parse('http://10.0.2.2/newHarvestDes/api/guardarVoucher.php'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(data),
+      final voucher = Voucher(
+        id: siguienteRemito,  
+        empresa: empresaController.text,
+        nombrePasajero: nombrePasajeroController.text,
+        origen: origenController.text,
+        horaOrigen: horaOrigenController.text,
+        destino: destinoController.text,
+        horaDestino: horaDestinoController.text,
+        fecha: fechaController.text,
+        observaciones: observacionesController.text,
+        tiempoEspera: tiempoEsperaController.text,
+        signaturePath: signaturePath,
       );
 
-      print("📥 Respuesta del servidor: ${response.body}");
+      final voucherJson = jsonEncode(voucher.toMap());
 
-      if (response.statusCode == 200) {
-        final responseBody = response.body.replaceAll(RegExp(r'^[^{]*'), '');
-        final responseBodyJson = jsonDecode(responseBody);
-        if (responseBodyJson['status'] == 'success') {
-          showDialog(
-            context: context,
-            builder: (BuildContext context) {
-              return AlertDialog(
-                title: Text('Éxito'),
-                content: Text(responseBodyJson['message']),
-                actions: <Widget>[
-                  TextButton(
-                    child: Text('Aceptar'),
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      _resetForm();
-                    },
-                  ),
-                ],
-              );
-            },
-          );
-        } else {
-          showDialog(
-            context: context,
-            builder: (BuildContext context) {
-              return AlertDialog(
-                title: Text('Error'),
-                content: Text('Error al guardar el voucher: ${responseBodyJson['message']}'),
-                actions: <Widget>[
-                  TextButton(
-                    child: Text('Aceptar'),
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    },
-                  ),
-                ],
-              );
-            },
-          );
+      final connectivityResult = await Connectivity().checkConnectivity();
+      if (connectivityResult == ConnectivityResult.none) {
+        try {
+          await DatabaseHelper().insertVoucher(voucher);
+          _showDialog('Éxito', 'Voucher guardado localmente.');
+        } catch (e) {
+          print('Error al guardar el voucher localmente: $e');
         }
       } else {
-        showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              title: Text('Error'),
-              content: Text('Error al enviar el voucher: ${response.body}'),
-              actions: <Widget>[
-                TextButton(
-                  child: Text('Aceptar'),
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                ),
-              ],
-            );
-          },
-        );
+        final url = Uri.parse('http://10.0.2.2/newHarvestDes/api/guardarVoucher.php');
+
+        var request = http.MultipartRequest('POST', url);
+        request.fields['id_remito_v'] = voucher.id;
+        request.fields['Empresa'] = voucher.empresa;
+        request.fields['nombre_pasajero'] = voucher.nombrePasajero;
+        request.fields['Origen'] = voucher.origen;
+        request.fields['hora_origen'] = voucher.horaOrigen;
+        request.fields['Destino'] = voucher.destino;
+        request.fields['hora_destino'] = voucher.horaDestino;
+        request.fields['Fecha'] = voucher.fecha;
+        request.fields['observaciones'] = voucher.observaciones ?? '';
+        request.fields['tiempo_espera'] = voucher.tiempoEspera ?? '';
+
+        if (voucher.signaturePath != null) {
+          var signatureFile = await http.MultipartFile.fromPath('signature', voucher.signaturePath!);
+          request.files.add(signatureFile);
+        }
+
+        try {
+          var response = await request.send();
+          if (response.statusCode == 200) {
+            var responseBody = await response.stream.bytesToString();
+            final responseBodyJson = jsonDecode(responseBody);
+
+            if (responseBodyJson['status'] == 'success') {
+              _showDialog('Éxito', responseBodyJson['message'], reset: true);
+            } else {
+              _showDialog('Error', 'Error al guardar el voucher: ${responseBodyJson['message']}');
+            }
+          } else {
+            _showDialog('Error', 'Error al enviar el voucher: ${response.reasonPhrase}');
+          }
+        } catch (e) {
+          _showDialog('Error', 'Error de conexión: $e');
+        }
       }
-    } catch (e) {
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: Text('Error'),
-            content: Text('Error de conexión: $e'),
-            actions: <Widget>[
-              TextButton(
-                child: Text('Aceptar'),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-              ),
-            ],
-          );
-        },
-      );
     }
+
+  void _showDialog(String title, String message, {bool reset = false}) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(title),
+          content: Text(message),
+          actions: <Widget>[
+            TextButton(
+              child: Text('Aceptar'),
+              onPressed: () {
+                Navigator.of(context).pop();
+                if (reset) _resetForm(); 
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _clearAllFields() {
@@ -276,104 +289,119 @@ class _VoucherFormState extends State<VoucherForm> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            if (_currentStep == 0) ...[
-              _buildStep1(),
-              SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  ElevatedButton(
-                    onPressed: _clearAllFields,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.grey,
-                      padding: EdgeInsets.symmetric(
-                        vertical: 12, horizontal: 30),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
+Widget build(BuildContext context) {
+  return SingleChildScrollView(
+    child: Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        children: [
+          if (_currentStep == 0) ...[
+            _buildStep1(),
+            SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                ElevatedButton(
+                  onPressed: _clearAllFields,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color.fromARGB(255, 134, 134, 134),
+                    padding: EdgeInsets.symmetric(vertical: 12, horizontal: 30),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Text('Limpiar',
-                      style: TextStyle(color: Colors.white, fontSize: 16)),
                   ),
-                  ElevatedButton(
-                    onPressed: _nextStep,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.purple,
-                      padding: EdgeInsets.symmetric(
-                        vertical: 12, horizontal: 30),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
+                  child: Text('Limpiar', style: TextStyle(color: Colors.white, fontSize: 16)),
+                ),
+                ElevatedButton(
+                  onPressed: _nextStep,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color.fromARGB(255, 123, 31, 162),
+                    padding: EdgeInsets.symmetric(vertical: 12, horizontal: 30),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Text('Siguiente',
-                      style: TextStyle(color: Colors.white, fontSize: 16)),
                   ),
-                ],
-              ),
-            ] else if (_currentStep == 1) ...[
-              _buildStep2(),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  TextButton(
-                    onPressed: _previousStep,
-                    child: Text("Volver", style: TextStyle(color: Colors.blue)),
-                  ),
-                  TextButton(
-                    onPressed: _clearSignature,
-                    child: Text("Limpiar Firma", style: TextStyle(color: Colors.red)),
-                  ),
-                  ElevatedButton(
-                    onPressed: _nextStep,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.purple,
-                      padding: EdgeInsets.symmetric(
-                        vertical: 12, horizontal: 30),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
+                  child: Text('Siguiente', style: TextStyle(color: Colors.white, fontSize: 16)),
+                ),
+              ],
+            ),
+          ] else if (_currentStep == 1) ...[
+            _buildStep2(),
+            SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                ElevatedButton(
+                  onPressed: _previousStep,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color.fromARGB(255, 134, 134, 134),
+                    padding: EdgeInsets.symmetric(vertical: 12, horizontal: 30),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Text('Siguiente',
-                      style: TextStyle(color: Colors.white, fontSize: 16)),
                   ),
-                ],
-              ),
-            ] else if (_currentStep == 2) ...[
-              _buildStep3(),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  TextButton(
-                    onPressed: _previousStep,
-                    child: Text("Volver", style: TextStyle(color: Colors.blue)),
-                  ),
-                  ElevatedButton(
-                    onPressed: _submitForm,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.purple,
-                      padding: EdgeInsets.symmetric(
-                        vertical: 12, horizontal: 30),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
+                  child: Text('Volver', style: TextStyle(color: Colors.white, fontSize: 16)),
+                ),
+                ElevatedButton(
+                  onPressed: _clearSignature,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color.fromARGB(255, 80, 80, 80),
+                    padding: EdgeInsets.symmetric(vertical: 12, horizontal: 30),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Text('Confirmar',
-                      style: TextStyle(color: Colors.white, fontSize: 16)),
                   ),
-                ],
-              ),
-            ],
+                  child: Text('Limpiar Firma', style: TextStyle(color: Colors.white, fontSize: 16)),
+                ),
+                ElevatedButton(
+                  onPressed: _nextStep,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color.fromARGB(255, 123, 31, 162),
+                    padding: EdgeInsets.symmetric(vertical: 12, horizontal: 30),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: Text('Siguiente', style: TextStyle(color: Colors.white, fontSize: 16)),
+                ),
+              ],
+            ),
+          ] else if (_currentStep == 2) ...[
+            _buildStep3(),
+            SizedBox(height: 20), // Margen entre la firma y los botones
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                ElevatedButton(
+                  onPressed: _previousStep,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color.fromARGB(255, 134, 134, 134),
+                    padding: EdgeInsets.symmetric(vertical: 12, horizontal: 30),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: Text('Volver', style: TextStyle(color: Colors.white, fontSize: 16)),
+                ),
+                ElevatedButton(
+                  onPressed: _submitForm,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color.fromARGB(255, 123, 31, 162),
+                    padding: EdgeInsets.symmetric(vertical: 12, horizontal: 30),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: Text('Confirmar', style: TextStyle(color: Colors.white, fontSize: 16)),
+                ),
+              ],
+            ),
           ],
-        ),
+        ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildStep1() {
     return Form(
@@ -459,7 +487,7 @@ class _VoucherFormState extends State<VoucherForm> {
           TextFormField(
             controller: tiempoEsperaController,
             decoration: InputDecoration(
-              labelText: "Tiempo de Espera(min)(*)",
+              labelText: "Tiempo de Espera *",
               prefixIcon: Icon(Icons.watch_off),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
@@ -471,7 +499,7 @@ class _VoucherFormState extends State<VoucherForm> {
           TextFormField(
             controller: observacionesController,
             decoration: InputDecoration(
-              labelText: "Observaciones(*)",
+              labelText: "Observaciones *",
               prefixIcon: Icon(Icons.subject),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
@@ -483,7 +511,7 @@ class _VoucherFormState extends State<VoucherForm> {
     );
   }
 
-  Widget _buildStep2() {
+Widget _buildStep2() {
     return Form(
       key: _formKey,
       child: Column(
@@ -518,7 +546,6 @@ class _VoucherFormState extends State<VoucherForm> {
               "Firma: ",
               style: TextStyle(
                 fontSize: 16,
-                fontWeight: FontWeight.bold,
               ),
             ),
           ),
@@ -536,34 +563,37 @@ class _VoucherFormState extends State<VoucherForm> {
     );
   }
 
-  Widget _buildStep3() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text("Fecha: ${fechaController.text}"),
-        Text("Origen: ${origenController.text}"),
-        Text("Hora Origen: ${horaOrigenController.text}"),
-        Text("Destino: ${destinoController.text}"),
-        Text("Hora Destino: ${horaDestinoController.text}"),
-        Text("Tiempo de Espera: ${tiempoEsperaController.text}"),
-        Text("Observaciones: ${observacionesController.text}"),
-        Text("Nombre del Pasajero: ${nombrePasajeroController.text}"),
-        Text("Empresa: ${empresaController.text}"),
-        SizedBox(height: 20),
-        Container(
-          height: 270,
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey),
-            borderRadius: BorderRadius.circular(10),
-          ),
+Widget _buildStep3() {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text("Fecha: ${fechaController.text}"),
+      Text("Origen: ${origenController.text}"),
+      Text("Hora Origen: ${horaOrigenController.text}"),
+      Text("Destino: ${destinoController.text}"),
+      Text("Hora Destino: ${horaDestinoController.text}"),
+      Text("Tiempo de Espera: ${tiempoEsperaController.text}"),
+      Text("Observaciones: ${observacionesController.text}"),
+      Text("Nombre del Pasajero: ${nombrePasajeroController.text}"),
+      Text("Empresa: ${empresaController.text}"),
+      SizedBox(height: 20),
+      Container(
+        height: 270,
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: AbsorbPointer( // Evita que se pueda editar la firma
           child: Signature(
             controller: _signatureController,
             backgroundColor: Colors.white,
           ),
         ),
-      ],
-    );
-  }
+      ),
+    ],
+  );
+}
+
 
   String? _validateField(String? value) {
     return (value == null || value.isEmpty) ? 'Campo obligatorio' : null;

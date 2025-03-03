@@ -54,13 +54,11 @@ class _CombustibleCargadosState extends State<CombustibleCargados> {
 
       if (response.statusCode == 200) {
         final responseBody = response.body.trim();
-        print(responseBody);
         return json.decode(responseBody);
       } else {
         throw Exception('Error al cargar los remitos');
       }
     } catch (e) {
-      print('Error al cargar los remitos: $e');
       return [];
     }
   }
@@ -200,6 +198,7 @@ class _CombustibleCargadosState extends State<CombustibleCargados> {
     }
   }
 
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -208,34 +207,41 @@ class _CombustibleCargadosState extends State<CombustibleCargados> {
         title: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-            Icon(Icons.cloud, color: const Color.fromARGB(255, 0, 0, 0)),
+            Icon(Icons.cloud, color: Color.fromARGB(255, 80, 80, 80)),
             SizedBox(width: 70),
             Switch(
-                value: _showLocal,
-                onChanged: (value) {
-                    setState(() {
-                        _showLocal = value;
-                    });
-                },
-                activeColor: const Color.fromARGB(255, 0, 0, 0),
+              value: _showLocal,
+              onChanged: (value) {
+                setState(() {
+                  _showLocal = value;
+                  if (_showLocal) {
+                    _localRemitosFuture = fetchLocalRemitos();
+                  } else {
+                    _remitosFuture = fetchRemitos();
+                  }
+                });
+              },
+              activeColor: Colors.white, 
+              activeTrackColor: Color.fromARGB(255, 156, 39, 176), 
+              inactiveTrackColor: const Color.fromARGB(255, 255, 255, 255), 
             ),
+
             SizedBox(width: 70),
-            Icon(Icons.phone_android, color: const Color.fromARGB(255, 0, 0, 0)), 
+            Icon(Icons.phone_android, color: Color.fromARGB(255, 80, 80, 80)), 
             ],
         ),
     ),
-
       body: _showLocal ? _buildLocalRemitos() : _buildServerRemitos(),
       floatingActionButton: _showLocal && _isConnected
           ? FloatingActionButton(
               onPressed: _showUploadConfirmationDialog,
-              child: Icon(Icons.cloud_upload),
+              backgroundColor: Color.fromARGB(255, 156, 39, 176),
+              child: Icon(Icons.cloud_upload, color: Colors.white),
               tooltip: 'Subir remitos locales',
             )
           : null,
     );
   }
-
 
   Widget _buildServerRemitos() {
     return FutureBuilder<List<dynamic>>(

@@ -1,8 +1,10 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:connectivity_plus/connectivity_plus.dart';
 import '../db/database_helper.dart';
 import '../db/user.dart';
+import '../db/voucher_dao.dart';
 
 class VoucherCargados extends StatefulWidget {
   @override
@@ -11,14 +13,18 @@ class VoucherCargados extends StatefulWidget {
 
 class _VoucherCargadosState extends State<VoucherCargados> {
   Future<List<dynamic>>? _vouchersFuture;
+  Future<List<Voucher>>? _localVouchersFuture;
   int _visibleRecords = 8;
   String nombreChofer = '';
   String letraChofer = '';
+  bool _showLocal = false;
+  bool _isConnected = false;
 
   @override
   void initState() {
     super.initState();
     _loadChoferData();
+    _checkConnectivity();
   }
 
   Future<void> _loadChoferData() async {
@@ -27,8 +33,16 @@ class _VoucherCargadosState extends State<VoucherCargados> {
       nombreChofer = user.username;
       letraChofer = user.letra;
       _vouchersFuture = fetchVouchers();
+      _localVouchersFuture = fetchLocalVouchers();
       setState(() {});
     }
+  }
+
+  Future<void> _checkConnectivity() async {
+    var connectivityResult = await (Connectivity().checkConnectivity());
+    setState(() {
+      _isConnected = connectivityResult != ConnectivityResult.none;
+    });
   }
 
   Future<List<dynamic>> fetchVouchers() async {
@@ -48,6 +62,74 @@ class _VoucherCargadosState extends State<VoucherCargados> {
       throw Exception('Error al cargar los vouchers');
     }
   }
+
+  Future<List<Voucher>> fetchLocalVouchers() async {
+      List<Voucher> vouchers = await DatabaseHelper().getPendingVouchers();
+      print('Vouchers locales obtenidos: ${vouchers.length}');
+      return vouchers;
+  }
+
+  Future<void> _uploadLocalVouchers() async {
+      List<Voucher> pendingVouchers = await DatabaseHelper().getPendingVouchers();
+      print('Vouchers pendientes a subir: ${pendingVouchers.length}');
+      for (Voucher voucher in pendingVouchers) {
+          try {
+              // Generar el nuevo ID en el formato X001, X002, etc.
+              String nuevoId = await DatabaseHelper().generarSiguienteRemito(letraChofer);
+              print('Subiendo voucher con ID local: ${voucher.id}, nuevo ID: $nuevoId');
+
+              final url = Uri.parse("http://10.0.2.2/newHarvestDes/api/guardarVoucher.php");
+
+              var request = http.MultipartRequest('POST', url);
+              request.fields['id_remito_v'] = nuevoId;
+              request.fields['Empresa'] = voucher.empresa;
+              request.fields['nombre_pasajero'] = voucher.nombrePasajero;
+              request.fields['Origen'] = voucher.origen;
+              request.fields['hora_origen'] = voucher.horaOrigen;
+              request.fields['Destino'] = voucher.destino;
+              request.fields['hora_destino'] = voucher.horaDestino;
+              request.fields['Fecha'] = voucher.fecha;
+              request.fields['observaciones'] = voucher.observaciones ?? '';
+              request.fields['tiempo_espera'] = voucher.tiempoEspera ?? '';
+
+              if (voucher.signaturePath != null) {
+                  var signatureFile = await http.MultipartFile.fromPath('signature', voucher.signaturePath!);
+                  request.files.add(signatureFile);
+              }
+
+              var response = await request.send();
+
+              if (response.statusCode == 200) {
+                  var responseBody = await response.stream.bytesToString();
+                  if (responseBody.startsWith('{')) {
+                      final responseBodyJson = jsonDecode(responseBody);
+
+                      if (responseBodyJson['status'] == 'success') {
+                          // Eliminar el voucher local después de subirlo
+                          await DatabaseHelper().deleteVoucher(voucher.id);
+                          print('Voucher con ID local: ${voucher.id} subido y eliminado localmente.');
+                      } else {
+                          print('Error al guardar el voucher: ${responseBodyJson['message']}');
+                      }
+                  } else {
+                      print('Respuesta inesperada del servidor: $responseBody');
+                  }
+              } else {
+                  print('Error al enviar el voucher: ${response.reasonPhrase}');
+              }
+          } catch (e) {
+              print('Error al subir el voucher: $e');
+          }
+      }
+      setState(() {
+          _localVouchersFuture = fetchLocalVouchers();
+      });
+  }
+
+  Future<String> generarSiguienteRemito(String letraChofer) async {
+    return await DatabaseHelper().generarSiguienteRemito(letraChofer);
+  }
+
 
   Future<void> _editVoucher(dynamic voucher) async {
     final TextEditingController empresaController = TextEditingController(text: voucher['Empresa']);
@@ -175,6 +257,48 @@ class _VoucherCargadosState extends State<VoucherCargados> {
 
   @override
   Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        centerTitle: true,
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.cloud, color: Color.fromARGB(255, 80, 80, 80)),
+            SizedBox(width: 70), 
+            Switch(
+              value: _showLocal,
+              onChanged: (value) {
+                setState(() {
+                  _showLocal = value;
+                  if (_showLocal) {
+                    _localVouchersFuture = fetchLocalVouchers();
+                  } else {
+                    _vouchersFuture = fetchVouchers();
+                  }
+                });
+              },
+              activeColor: Colors.white,
+              activeTrackColor: Color.fromARGB(255, 156, 39, 176), 
+              inactiveTrackColor: const Color.fromARGB(255, 255, 255, 255), 
+            ),
+            SizedBox(width: 70), 
+            Icon(Icons.phone_android, color: Color.fromARGB(255, 80, 80, 80)),
+          ],
+        ),
+      ),
+      body: _showLocal ? _buildLocalVouchers() : _buildServerVouchers(),
+      floatingActionButton: _showLocal && _isConnected
+          ? FloatingActionButton(
+              onPressed: _showUploadConfirmationDialog,
+              backgroundColor: Color.fromARGB(255, 156, 39, 176),
+              child: Icon(Icons.cloud_upload, color: Colors.white),
+              tooltip: 'Subir vouchers locales',
+            )
+          : null,
+    );
+  }
+
+  Widget _buildServerVouchers() {
     return FutureBuilder<List<dynamic>>(
       future: _vouchersFuture,
       builder: (context, snapshot) {
@@ -298,6 +422,128 @@ class _VoucherCargadosState extends State<VoucherCargados> {
             ],
           );
         }
+      },
+    );
+  }
+
+  Widget _buildLocalVouchers() {
+    return FutureBuilder<List<Voucher>>(
+      future: _localVouchersFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator());
+        } else if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return Center(child: Text('No hay vouchers cargados'));
+        } else {
+          final vouchers = snapshot.data!;
+          final visibleVouchers = vouchers.take(_visibleRecords).toList();
+          return Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.vertical,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: DataTable(
+                      columns: [
+                        DataColumn(label: Text("ID")),
+                        DataColumn(label: Text("Empresa")),
+                        DataColumn(label: Text("Pasajero")),
+                        DataColumn(label: Text("Origen")),
+                        DataColumn(label: Text("Destino")),
+                        DataColumn(label: Text("Fecha")),
+                        DataColumn(label: Text("Observaciones")),
+                        DataColumn(label: Text("Tiempo de espera")),
+                      ],
+                      rows: visibleVouchers.map((voucher) {
+                        return DataRow(cells: [
+                          DataCell(Text(voucher.id)),
+                          DataCell(Text(voucher.empresa)),
+                          DataCell(Text(voucher.nombrePasajero)),
+                          DataCell(Text('${voucher.origen} (${voucher.horaOrigen})')),
+                          DataCell(Text('${voucher.destino} (${voucher.horaDestino})')),
+                          DataCell(Text(voucher.fecha)),
+                          DataCell(
+                            voucher.observaciones == null 
+                              ? Text("N/A") 
+                              : Container(
+                                  width: 200,
+                                  child: Text(
+                                    voucher.observaciones!,
+                                    softWrap: true,
+                                    maxLines: null,
+                                  ),
+                                ),
+                          ),
+                          DataCell(
+                              voucher.tiempoEspera == null
+                              ? Text("N/A")
+                              : Text(voucher.tiempoEspera!)
+                          ),
+                        ]);
+                      }).toList(),
+                    ),
+                  ),
+                ),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (_visibleRecords < vouchers.length)
+                    ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          _visibleRecords += 8;
+                        });
+                      },
+                      child: Text('Ver Más'),
+                    ),
+                  if (_visibleRecords > 8)
+                    ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          _visibleRecords = 8;
+                        });
+                      },
+                      child: Text('Ver Menos'),
+                    ),
+                ],
+              ),
+            ],
+          );
+        }
+      },
+    );
+  }
+
+  Future<void> _showUploadConfirmationDialog() async {
+    List<Voucher> pendingVouchers = await DatabaseHelper().getPendingVouchers();
+    int count = pendingVouchers.length;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Confirmación'),
+          content: Text('Estás por cargar $count vouchers. ¿Estás seguro?'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _uploadLocalVouchers();
+              },
+              child: Text('Aceptar'),
+            ),
+          ],
+        );
       },
     );
   }

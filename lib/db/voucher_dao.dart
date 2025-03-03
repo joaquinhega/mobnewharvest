@@ -1,59 +1,63 @@
 class Voucher {
-  int? id;
+  String id;
   String empresa;
-  String fecha;
+  String nombrePasajero;
   String origen;
   String horaOrigen;
   String destino;
   String horaDestino;
-  String tiempoEspera;
-  String observaciones;
-  String nombrePasajero;
-  String firma;
+  String fecha;
+  String? observaciones;
+  String? tiempoEspera;
+  String? signaturePath;
 
   Voucher({
-    this.id,
+    required this.id,
     required this.empresa,
-    required this.fecha,
+    required this.nombrePasajero,
     required this.origen,
     required this.horaOrigen,
     required this.destino,
     required this.horaDestino,
-    required this.tiempoEspera,
-    required this.observaciones,
-    required this.nombrePasajero,
-    required this.firma,
+    required this.fecha,
+    this.observaciones,
+    this.tiempoEspera,
+    this.signaturePath,
   });
 
   Map<String, dynamic> toMap() {
     return {
       'id': id,
       'empresa': empresa,
-      'fecha': fecha,
+      'nombre_pasajero': nombrePasajero,
       'origen': origen,
-      'horaOrigen': horaOrigen,
+      'hora_origen': horaOrigen,
       'destino': destino,
-      'horaDestino': horaDestino,
-      'tiempo_espera': tiempoEspera,
+      'hora_destino': horaDestino,
+      'fecha': fecha,
       'observaciones': observaciones,
-      'nombrePasajero': nombrePasajero,
-      'firma': firma,
+      'tiempo_espera': tiempoEspera,
+      'signature_path': signaturePath,
     };
   }
 
   factory Voucher.fromMap(Map<String, dynamic> map) {
+    print('Convirtiendo map a Voucher: $map');
+    if (!RegExp(r'^[A-Z]\d{3}$').hasMatch(map['id'])) {
+      print('Formato de ID inválido: ${map['id']}');
+    }
     return Voucher(
       id: map['id'],
       empresa: map['empresa'],
-      fecha: map['fecha'],
+      nombrePasajero: map['nombre_pasajero'],
       origen: map['origen'],
-      horaOrigen: map['horaOrigen'],
+      horaOrigen: map['hora_origen'],
       destino: map['destino'],
-      horaDestino: map['horaDestino'],
-      tiempoEspera: map['tiempo_espera'],
+      horaDestino: map['hora_destino'],
+      fecha: map['fecha'],
       observaciones: map['observaciones'],
-      nombrePasajero: map['nombrePasajero'],
-      firma: map['firma'],
+      tiempoEspera: map['tiempo_espera'],
+      signaturePath: map['signature_path'],
     );
   }
 }
