@@ -217,26 +217,26 @@ class _CombustibleFormState extends State<CombustibleForm> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Color.fromARGB(255, 134, 134, 134),
                             padding: EdgeInsets.symmetric(
-                              vertical: 12, horizontal: 30),
+                              vertical: 10, horizontal: 25), //MODIFICADO
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10),
                             ),
                           ),
                           child: Text('Limpiar',
-                            style: TextStyle(color: Colors.white, fontSize: 16)),
+                            style: TextStyle(color: Colors.white, fontSize: 14)), //MODIFICADO
                         ),
                         ElevatedButton(
                           onPressed: _submitCombustible,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Color.fromARGB(255, 123, 31, 162),
                             padding: EdgeInsets.symmetric(
-                              vertical: 12, horizontal: 30),
+                              vertical: 10, horizontal: 25), //MODIFICADO
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10),
                             ),
                           ),
                           child: Text('Enviar Combustible',
-                            style: TextStyle(color: Colors.white, fontSize: 16)),
+                            style: TextStyle(color: Colors.white, fontSize: 14)), //MODIFICADO
                         ),
                       ],
                     ),

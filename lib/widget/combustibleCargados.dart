@@ -370,76 +370,76 @@ Widget build(BuildContext context) {
     );
   }
 
-Widget _buildLocalRemitos() {
-  return FutureBuilder<List<Combustible>>(
-    future: _localRemitosFuture,
-    builder: (context, snapshot) {
-      if (snapshot.connectionState == ConnectionState.waiting) {
-        return Center(child: CircularProgressIndicator());
-      } else if (snapshot.hasError) {
-        return Center(child: Text('Error: ${snapshot.error}'));
-      } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-        return Center(child: Text('No hay remitos cargados'));
-      } else {
-        final remitos = snapshot.data!;
-        final visibleRemitos = remitos.take(_visibleRecords).toList();
-        return Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                scrollDirection: Axis.vertical,
+  Widget _buildLocalRemitos() {
+    return FutureBuilder<List<Combustible>>(
+      future: _localRemitosFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator());
+        } else if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return Center(child: Text('No hay remitos cargados'));
+        } else {
+          final remitos = snapshot.data!;
+          final visibleRemitos = remitos.take(_visibleRecords).toList();
+          return Column(
+            children: [
+              Expanded(
                 child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: DataTable(
-                    columns: [
-                      DataColumn(label: Text("ID")),
-                      DataColumn(label: Text("Monto")),
-                      DataColumn(label: Text("Fecha")),
-                      DataColumn(label: Text("Patente")),
-                      DataColumn(label: Text("Nombre")),
-                    ],
-                    rows: visibleRemitos.map((remito) {
-                      return DataRow(cells: [
-                        DataCell(Text(remito.id)),
-                        DataCell(Text(remito.monto.toString())),
-                        DataCell(Text(remito.fecha)),
-                        DataCell(Text(remito.patente)),
-                        DataCell(Text(remito.nombre)),
-                      ]);
-                    }).toList(),
+                  scrollDirection: Axis.vertical,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: DataTable(
+                      columns: [
+                        DataColumn(label: Text("ID")),
+                        DataColumn(label: Text("Monto")),
+                        DataColumn(label: Text("Fecha")),
+                        DataColumn(label: Text("Patente")),
+                        DataColumn(label: Text("Nombre")),
+                      ],
+                      rows: visibleRemitos.map((remito) {
+                        return DataRow(cells: [
+                          DataCell(Text(remito.id)),
+                          DataCell(Text(remito.monto.toString())),
+                          DataCell(Text(remito.fecha)),
+                          DataCell(Text(remito.patente)),
+                          DataCell(Text(remito.nombre)),
+                        ]);
+                      }).toList(),
+                    ),
                   ),
                 ),
               ),
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (_visibleRecords < remitos.length)
-                  ElevatedButton(
-                    onPressed: () {
-                      setState(() {
-                        _visibleRecords += 8;
-                      });
-                    },
-                    child: Text('Ver Más'),
-                  ),
-                if (_visibleRecords > 8)
-                  ElevatedButton(
-                    onPressed: () {
-                      setState(() {
-                        _visibleRecords = 8;
-                      });
-                    },
-                    child: Text('Ver Menos'),
-                  ),
-              ],
-            ),
-          ],
-        );
-      }
-    },
-  );
-}
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (_visibleRecords < remitos.length)
+                    ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          _visibleRecords += 8;
+                        });
+                      },
+                      child: Text('Ver Más'),
+                    ),
+                  if (_visibleRecords > 8)
+                    ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          _visibleRecords = 8;
+                        });
+                      },
+                      child: Text('Ver Menos'),
+                    ),
+                ],
+              ),
+            ],
+          );
+        }
+      },
+    );
+  }
 
   Future<void> _showUploadConfirmationDialog() async {
     List<Combustible> pendingCombustibles = await DatabaseHelper().getPendingCombustibles();

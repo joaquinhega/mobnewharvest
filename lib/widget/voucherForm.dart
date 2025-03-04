@@ -17,6 +17,7 @@ class VoucherForm extends StatefulWidget {
 class _VoucherFormState extends State<VoucherForm> {
   final _formKey = GlobalKey<FormState>();
   int _currentStep = 0;
+  bool _isLoading = false;
 
   final TextEditingController fechaController = TextEditingController();
   final TextEditingController empresaController = TextEditingController();
@@ -307,7 +308,7 @@ Widget build(BuildContext context) {
                   onPressed: _clearAllFields,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Color.fromARGB(255, 134, 134, 134),
-                    padding: EdgeInsets.symmetric(vertical: 12, horizontal: 30),
+                    padding: EdgeInsets.symmetric(vertical: 10, horizontal: 25), //MODIFICADO
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -318,7 +319,7 @@ Widget build(BuildContext context) {
                   onPressed: _nextStep,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Color.fromARGB(255, 123, 31, 162),
-                    padding: EdgeInsets.symmetric(vertical: 12, horizontal: 30),
+                    padding: EdgeInsets.symmetric(vertical: 10, horizontal: 25), //MODIFICADO
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -337,34 +338,34 @@ Widget build(BuildContext context) {
                   onPressed: _previousStep,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Color.fromARGB(255, 134, 134, 134),
-                    padding: EdgeInsets.symmetric(vertical: 12, horizontal: 30),
+                    padding: EdgeInsets.symmetric(vertical: 10, horizontal: 25),//MODIFICADO
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
-                  child: Text('Volver', style: TextStyle(color: Colors.white, fontSize: 16)),
+                  child: Text('Volver', style: TextStyle(color: Colors.white, fontSize: 14)),
                 ),
                 ElevatedButton(
                   onPressed: _clearSignature,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Color.fromARGB(255, 80, 80, 80),
-                    padding: EdgeInsets.symmetric(vertical: 12, horizontal: 30),
+                    padding: EdgeInsets.symmetric(vertical: 10, horizontal: 25), //MODIFICADO
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
-                  child: Text('Limpiar Firma', style: TextStyle(color: Colors.white, fontSize: 16)),
+                  child: Text('Limpiar Firma', style: TextStyle(color: Colors.white, fontSize: 14)),
                 ),
                 ElevatedButton(
                   onPressed: _nextStep,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Color.fromARGB(255, 123, 31, 162),
-                    padding: EdgeInsets.symmetric(vertical: 12, horizontal: 30),
+                    padding: EdgeInsets.symmetric(vertical: 10, horizontal: 25), //MODIFICADO
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
-                  child: Text('Siguiente', style: TextStyle(color: Colors.white, fontSize: 16)),
+                  child: Text('Siguiente', style: TextStyle(color: Colors.white, fontSize: 14)),
                 ),
               ],
             ),
@@ -378,23 +379,23 @@ Widget build(BuildContext context) {
                   onPressed: _previousStep,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Color.fromARGB(255, 134, 134, 134),
-                    padding: EdgeInsets.symmetric(vertical: 12, horizontal: 30),
+                    padding: EdgeInsets.symmetric(vertical: 10, horizontal: 25), //MODIFICADO
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
-                  child: Text('Volver', style: TextStyle(color: Colors.white, fontSize: 16)),
+                  child: Text('Volver', style: TextStyle(color: Colors.white, fontSize: 14)), //MODIFICADO
                 ),
                 ElevatedButton(
                   onPressed: _submitForm,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Color.fromARGB(255, 123, 31, 162),
-                    padding: EdgeInsets.symmetric(vertical: 12, horizontal: 30),
+                    padding: EdgeInsets.symmetric(vertical: 10, horizontal: 25),//MODIFICADO
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
-                  child: Text('Confirmar', style: TextStyle(color: Colors.white, fontSize: 16)),
+                  child: Text('Confirmar', style: TextStyle(color: Colors.white, fontSize: 14)), //MODIFICADO
                 ),
               ],
             ),

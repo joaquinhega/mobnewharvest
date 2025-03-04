@@ -20,7 +20,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       body: Column(
         children: [
-          SizedBox(height: 20), 
+          SizedBox(height: 10), //MODIFICADO
           Container(
             width: 300, 
             height: 50, 
