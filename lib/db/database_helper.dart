@@ -180,7 +180,7 @@ class DatabaseHelper {
 
     Future<String?> obtenerUltimoRemitoServidor(String letraChofer) async {
         try {
-            final url = Uri.parse('http://10.0.2.2/newHarvestDes/api/RemitoV.php');
+            final url = Uri.parse('https://newharvest.com.ar/vouchers/api/remitoV.php');
             final bodyData = jsonEncode({'letra_chofer': letraChofer});
 
             final response = await http.post(

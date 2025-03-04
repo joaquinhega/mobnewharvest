@@ -8,7 +8,7 @@ class LogoutService {
     final navigator = Navigator.of(context); 
     final scaffoldMessenger = ScaffoldMessenger.of(context); 
 
-    final url = Uri.parse("http://10.0.2.2/newHarvestDes/Controller/cerrarSesion.php");
+    final url = Uri.parse("https://newharvest.com.ar/vouchers/Controller/cerrarSesion.php");
     try {
       final response = await http.get(url);
       if (response.statusCode == 200) {

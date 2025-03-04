@@ -88,15 +88,17 @@ class _VoucherFormState extends State<VoucherForm> {
     final connectivityResult = await Connectivity().checkConnectivity();
     
     if (connectivityResult == ConnectivityResult.none) {
+
       // Si no hay conexión, generar un ID temporal incremental
       String? ultimoRemito = await obtenerUltimoRemitoLocal();
       if (ultimoRemito != null) {
         int numero = int.parse(ultimoRemito) + 1;
         return numero.toString();
       } else {
-        return '1'; // Comienza con 1 si no hay remitos registrados
+        return '1';
       }
     } else {
+
       // Si hay conexión, obtener el último remito desde el servidor
       String? ultimoRemito = await obtenerUltimoRemito(letraChofer);
       if (ultimoRemito != null && ultimoRemito.length > 1) {
@@ -104,7 +106,7 @@ class _VoucherFormState extends State<VoucherForm> {
         if (RegExp(r'^\d+$').hasMatch(numeroParte)) {
           int numero = int.parse(numeroParte);
           String nuevoRemito = (numero + 1).toString().padLeft(3, '0');
-          return letraChofer + nuevoRemito; // Devuelve la letra del chofer con el número incrementado
+          return letraChofer + nuevoRemito;
         } else {
           throw FormatException('Formato de remito incorrecto: $ultimoRemito');
         }
@@ -116,7 +118,7 @@ class _VoucherFormState extends State<VoucherForm> {
 
   Future<String?> obtenerUltimoRemito(String letraChofer) async {
       try {
-        final url = Uri.parse('http://10.0.2.2/newHarvestDes/api/RemitoV.php');
+        final url = Uri.parse('https://newharvest.com.ar/vouchers/api/remitoV.php');
         final bodyData = jsonEncode({'letra_chofer': letraChofer});
 
         final response = await http.post(
@@ -208,7 +210,7 @@ class _VoucherFormState extends State<VoucherForm> {
           print('Error al guardar el voucher localmente: $e');
         }
       } else {
-        final url = Uri.parse('http://10.0.2.2/newHarvestDes/api/guardarVoucher.php');
+        final url = Uri.parse('https://newharvest.com.ar/vouchers/api/guardarVoucher.php');
 
         var request = http.MultipartRequest('POST', url);
         request.fields['id_remito_v'] = voucher.id;

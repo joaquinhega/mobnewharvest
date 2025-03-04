@@ -62,7 +62,7 @@ class _CombustibleFormState extends State<CombustibleForm> {
       _showDialog('Éxito', 'Combustible guardado localmente.');
     } else {
       // Hay conexión a Internet, enviar al servidor
-      final url = Uri.parse("http://10.0.2.2/newHarvestDes/api/guardarCombustible.php");
+      final url = Uri.parse("https://newharvest.com.ar/vouchers/api/guardarCombustible.php");
 
       final response = await http.post(
         url,
