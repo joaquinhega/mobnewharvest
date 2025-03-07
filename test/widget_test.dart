@@ -7,13 +7,15 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
 import 'package:mobnewharvest/main.dart';
+import 'package:mobnewharvest/utils/connectivity_service.dart' as my_connectivity_service;
 
 void main() {
   testWidgets('Counter increments smoke test', (WidgetTester tester) async {
+    my_connectivity_service.ConnectivityService connectivityService = my_connectivity_service.ConnectivityService();
+
     // Build our app and trigger a frame.
-    await tester.pumpWidget(MyApp());
+    await tester.pumpWidget(MyApp(connectivityService: connectivityService));
 
     // Verify that our counter starts at 0.
     expect(find.text('0'), findsOneWidget);

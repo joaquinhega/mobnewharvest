@@ -5,8 +5,14 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import '../db/database_helper.dart';
 import '../db/user.dart';
 import '../db/combustible_dao.dart';
+import '../utils/connectivity_service.dart' as my_connectivity_service;
+import 'dart:async';
 
 class CombustibleCargados extends StatefulWidget {
+  final my_connectivity_service.ConnectivityService connectivityService;
+
+  CombustibleCargados({required this.connectivityService});
+
   @override
   _CombustibleCargadosState createState() => _CombustibleCargadosState();
 }
@@ -18,12 +24,23 @@ class _CombustibleCargadosState extends State<CombustibleCargados> {
   String nombreChofer = '';
   bool _showLocal = false;
   bool _isConnected = false;
+  late StreamSubscription<bool> _connectivitySubscription;
 
   @override
   void initState() {
     super.initState();
     _loadNombreChofer();
-    _checkConnectivity();
+    _connectivitySubscription = widget.connectivityService.connectionStatus.listen((isConnected) {
+      setState(() {
+        _isConnected = isConnected;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _connectivitySubscription.cancel();
+    super.dispose();
   }
 
   Future<void> _loadNombreChofer() async {
@@ -36,37 +53,30 @@ class _CombustibleCargadosState extends State<CombustibleCargados> {
     }
   }
 
-  Future<void> _checkConnectivity() async {
-    var connectivityResult = await (Connectivity().checkConnectivity());
-    setState(() {
-      _isConnected = connectivityResult != ConnectivityResult.none;
-    });
-  }
+  Future<List<dynamic>> fetchRemitos() async {
+    try {
+      final connectivityResult = await Connectivity().checkConnectivity();
+      if (connectivityResult == ConnectivityResult.none) {
+        throw Exception('Sin conexión');
+      }
 
-Future<List<dynamic>> fetchRemitos() async {
-  try {
-    final connectivityResult = await Connectivity().checkConnectivity();
-    if (connectivityResult == ConnectivityResult.none) {
-      throw Exception('Sin conexión');
+      final response = await http.get(
+        Uri.parse('https://newharvest.com.ar/vouchers/api/getRemitos.php'),
+        headers: {
+          'Nombre': nombreChofer,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final responseBody = response.body.trim();
+        return json.decode(responseBody);
+      } else {
+        throw Exception('Error al cargar los remitos');
+      }
+    } catch (e) {
+      return Future.error(e);
     }
-
-    final response = await http.get(
-      Uri.parse('https://newharvest.com.ar/vouchers/api/getRemitos.php'),
-      headers: {
-        'Nombre': nombreChofer,
-      },
-    );
-
-    if (response.statusCode == 200) {
-      final responseBody = response.body.trim();
-      return json.decode(responseBody);
-    } else {
-      throw Exception('Error al cargar los remitos');
-    }
-  } catch (e) {
-    return Future.error(e);
   }
-}
 
   Future<List<Combustible>> fetchLocalRemitos() async {
     return await DatabaseHelper().getPendingCombustibles();
@@ -203,58 +213,57 @@ Future<List<dynamic>> fetchRemitos() async {
     }
   }
 
-
-@override
-Widget build(BuildContext context) {
-  return Scaffold(
-    appBar: AppBar(
-      centerTitle: true,
-      title: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.cloud, color: Color.fromARGB(255, 80, 80, 80)),
-          SizedBox(width: 70), 
-          Switch(
-            value: _showLocal,
-            onChanged: (value) {
-              setState(() {
-                _showLocal = value;
-                if (_showLocal) {
-                  _localRemitosFuture = fetchLocalRemitos();
-                } else {
-                  _remitosFuture = fetchRemitos();
-                }
-              });
-            },
-            activeColor: Colors.white,
-            activeTrackColor: Color.fromARGB(255, 156, 39, 176), 
-            inactiveTrackColor: const Color.fromARGB(255, 255, 255, 255), 
-          ),
-          SizedBox(width: 70), 
-          Icon(Icons.phone_android, color: Color.fromARGB(255, 80, 80, 80)),
-        ],
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        centerTitle: true,
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.cloud, color: Color.fromARGB(255, 80, 80, 80)),
+            SizedBox(width: 70), 
+            Switch(
+              value: _showLocal,
+              onChanged: (value) {
+                setState(() {
+                  _showLocal = value;
+                  if (_showLocal) {
+                    _localRemitosFuture = fetchLocalRemitos();
+                  } else {
+                    _remitosFuture = fetchRemitos();
+                  }
+                });
+              },
+              activeColor: Colors.white,
+              activeTrackColor: Color.fromARGB(255, 156, 39, 176), 
+              inactiveTrackColor: const Color.fromARGB(255, 255, 255, 255), 
+            ),
+            SizedBox(width: 70), 
+            Icon(Icons.phone_android, color: Color.fromARGB(255, 80, 80, 80)),
+          ],
+        ),
       ),
-    ),
-    body: _showLocal ? _buildLocalRemitos() : _buildServerRemitos(),
-    floatingActionButton: _showLocal && _isConnected
-        ? FutureBuilder<List<Combustible>>(
-            future: _localRemitosFuture,
-            builder: (context, snapshot) {
-              if (snapshot.hasData && snapshot.data!.isNotEmpty) {
-                return FloatingActionButton(
-                  onPressed: _showUploadConfirmationDialog,
-                  backgroundColor: Color.fromARGB(255, 156, 39, 176),
-                  child: Icon(Icons.cloud_upload, color: Colors.white),
-                  tooltip: 'Subir remitos locales',
-                );
-              } else {
-                return Container(); // No mostrar el botón si no hay remitos locales
-              }
-            },
-          )
-        : null,
-  );
-}
+      body: _showLocal ? _buildLocalRemitos() : _buildServerRemitos(),
+      floatingActionButton: _showLocal && _isConnected
+          ? FutureBuilder<List<Combustible>>(
+              future: _localRemitosFuture,
+              builder: (context, snapshot) {
+                if (snapshot.hasData && snapshot.data!.isNotEmpty) {
+                  return FloatingActionButton(
+                    onPressed: _showUploadConfirmationDialog,
+                    backgroundColor: Color.fromARGB(255, 156, 39, 176),
+                    child: Icon(Icons.cloud_upload, color: Colors.white),
+                    tooltip: 'Subir remitos locales',
+                  );
+                } else {
+                  return Container(); // No mostrar el botón si no hay remitos locales
+                }
+              },
+            )
+          : null,
+    );
+  }
 
   Widget _buildServerRemitos() {
     return FutureBuilder<List<dynamic>>(

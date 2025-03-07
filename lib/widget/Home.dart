@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'voucherForm.dart';
 import 'combustibleForm.dart';
+import '../utils/connectivity_service.dart';
 
 class HomeScreen extends StatefulWidget {
   final Function(int) onItemSelected;
@@ -14,6 +15,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   bool isVoucherSelected = true;
+  final connectivityService = ConnectivityService(); // Add this line
 
   @override
   Widget build(BuildContext context) {
@@ -94,7 +96,9 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           SizedBox(height: 20),
           Expanded(
-            child: isVoucherSelected ? VoucherForm() : CombustibleForm(),
+            child: isVoucherSelected 
+                ? VoucherForm(connectivityService: connectivityService) 
+                : CombustibleForm(connectivityService: connectivityService),
           ),
         ],
       ),

@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 import 'package:mobnewharvest/widget/logout.dart';
+import '../utils/connectivity_service.dart' as my_connectivity_service;
 
 class Footer extends StatefulWidget {
   final Function(int) onItemSelected;
   final int selectedIndex;
+  final my_connectivity_service.ConnectivityService connectivityService;
 
-  Footer({required this.onItemSelected, required this.selectedIndex});
+  Footer({required this.onItemSelected, required this.selectedIndex, required this.connectivityService});
 
   @override
   _FooterState createState() => _FooterState();
@@ -29,7 +31,7 @@ class _FooterState extends State<Footer> {
       ],
       onTap: (index) {
         if (index == 2) {
-          LogoutService.showLogoutDialog(context);
+          LogoutService.showLogoutDialog(context, widget.connectivityService);
         } else {
           widget.onItemSelected(index);
         }

@@ -2,62 +2,32 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'login.dart';
 import '../db/database_helper.dart';
+import '../utils/connectivity_service.dart' as my_connectivity_service;
 
 class LogoutService {
-  static Future<void> _logout(BuildContext context) async {
-    final navigator = Navigator.of(context); 
-    final scaffoldMessenger = ScaffoldMessenger.of(context); 
-
-    final url = Uri.parse("https://newharvest.com.ar/vouchers/Controller/cerrarSesion.php");
-    try {
-      final response = await http.get(url);
-      if (response.statusCode == 200) {
-        print("✅ Sesión cerrada correctamente");
-
-        await DatabaseHelper().deleteUser();
-
-        scaffoldMessenger.showSnackBar(
-          SnackBar(content: Text("Sesión cerrada correctamente")),
-        );
-
-        await Future.delayed(Duration(seconds: 1));
-
-        navigator.pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => Login()),
-          (route) => false,
-        );
-      } else {
-        print("⚠️ Error al cerrar sesión");
-        scaffoldMessenger.showSnackBar(
-          SnackBar(content: Text("Error al cerrar sesión")),
-        );
-      }
-    } catch (e) {
-      print("❌ Error: $e");
-      scaffoldMessenger.showSnackBar(
-        SnackBar(content: Text("No se pudo conectar al servidor")),
-      );
-    }
-  }
-
-  static void showLogoutDialog(BuildContext context) {
+  static void showLogoutDialog(BuildContext context, my_connectivity_service.ConnectivityService connectivityService) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text("Cerrar Sesión"),
-          content: Text("¿Estás seguro de que quieres cerrar sesión?"),
-          actions: [
+          title: Text("Cerrar sesión"),
+          content: Text("¿Estás seguro de que deseas cerrar sesión?"),
+          actions: <Widget>[
             TextButton(
-              onPressed: () => Navigator.pop(context),
               child: Text("Cancelar"),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
             ),
             TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                _logout(context);
+              child: Text("Cerrar sesión"),
+              onPressed: () async {
+                await DatabaseHelper().deleteUser();
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (context) => Login(connectivityService: connectivityService)),
+                  (Route<dynamic> route) => false,
+                );
               },
-              child: Text("Cerrar Sesión", style: TextStyle(color: Colors.red)),
             ),
           ],
         );

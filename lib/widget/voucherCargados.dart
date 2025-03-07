@@ -5,8 +5,14 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import '../db/database_helper.dart';
 import '../db/user.dart';
 import '../db/voucher_dao.dart';
+import '../utils/connectivity_service.dart' as my_connectivity_service;
+import 'dart:async';
 
 class VoucherCargados extends StatefulWidget {
+  final my_connectivity_service.ConnectivityService connectivityService;
+
+  VoucherCargados({required this.connectivityService});
+
   @override
   _VoucherCargadosState createState() => _VoucherCargadosState();
 }
@@ -19,13 +25,24 @@ class _VoucherCargadosState extends State<VoucherCargados> {
   String letraChofer = '';
   bool _showLocal = false;
   bool _isConnected = false;
+  late StreamSubscription<bool> _connectivitySubscription;
 
-  @override
-  void initState() {
-    super.initState();
-    _loadChoferData();
-    _checkConnectivity();
-  }
+@override
+void initState() {
+  super.initState();
+  _loadChoferData();
+  _connectivitySubscription = widget.connectivityService.connectionStatus.listen((isConnected) {
+    setState(() {
+      _isConnected = isConnected;
+    });
+  });
+}
+
+@override
+void dispose() {
+  _connectivitySubscription.cancel();
+  super.dispose();
+}
 
   Future<void> _loadChoferData() async {
     User? user = await DatabaseHelper().getLoggedInUser();
@@ -316,142 +333,142 @@ Widget build(BuildContext context) {
   );
 }
 
-  Widget _buildServerVouchers() {
-    return FutureBuilder<List<dynamic>>(
-      future: _vouchersFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Center(child: CircularProgressIndicator());
-        } else if (snapshot.hasError) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.wifi_off, size: 100, color: Colors.grey),
-                SizedBox(height: 20),
-                Text('Sin conexión', style: TextStyle(fontSize: 24)),
-              ],
-            ),
-          );
-        } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return Center(child: Text('No hay vouchers cargados'));
-        } else {
-          final vouchers = snapshot.data!;
-          final visibleVouchers = vouchers.take(_visibleRecords).toList();
-          return Column(
+Widget _buildServerVouchers() {
+  return FutureBuilder<List<dynamic>>(
+    future: _vouchersFuture,
+    builder: (context, snapshot) {
+      if (snapshot.connectionState == ConnectionState.waiting) {
+        return Center(child: CircularProgressIndicator());
+      } else if (snapshot.hasError) {
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Expanded(
+              Icon(Icons.wifi_off, size: 100, color: Colors.grey),
+              SizedBox(height: 20),
+              Text('Sin conexión', style: TextStyle(fontSize: 24)),
+            ],
+          ),
+        );
+      } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+        return Center(child: Text('No hay vouchers cargados'));
+      } else {
+        final vouchers = snapshot.data!;
+        final visibleVouchers = vouchers.take(_visibleRecords).toList();
+        return Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.vertical,
                 child: SingleChildScrollView(
-                  scrollDirection: Axis.vertical,
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: DataTable(
-                      columns: [
-                        DataColumn(label: Text("ID")),
-                        DataColumn(label: Text("Empresa")),
-                        DataColumn(label: Text("Pasajero")),
-                        DataColumn(label: Text("Origen")),
-                        DataColumn(label: Text("Destino")),
-                        DataColumn(label: Text("Fecha")),
-                        DataColumn(label: Text("Observaciones")),
-                        DataColumn(label: Text("Tiempo de espera")),
-                        DataColumn(label: Text("Acciones")),
-                      ],
-                      rows: visibleVouchers.map((voucher) {
-                        return DataRow(cells: [
-                          DataCell(Text(voucher['id_remito_v'].toString())),
-                          DataCell(Text(voucher['Empresa'].toString())),
-                          DataCell(Text(voucher['nombre_pasajero'].toString())),
-                          DataCell(Text('${voucher['Origen']} (${voucher['hora_origen']})')),
-                          DataCell(Text('${voucher['Destino']} (${voucher['hora_destino']})')),
-                          DataCell(Text(voucher['Fecha'].toString())),
-                          DataCell(
-                            voucher['observaciones'] == null 
-                              ? Text("N/A") 
-                              : Container(
-                                  width: 200,
-                                  child: Text(
-                                    voucher['observaciones'].toString(),
-                                    softWrap: true,
-                                    maxLines: null,
-                                  ),
+                  scrollDirection: Axis.horizontal,
+                  child: DataTable(
+                    columns: [
+                      DataColumn(label: Text("ID")),
+                      DataColumn(label: Text("Empresa")),
+                      DataColumn(label: Text("Pasajero")),
+                      DataColumn(label: Text("Origen")),
+                      DataColumn(label: Text("Destino")),
+                      DataColumn(label: Text("Fecha")),
+                      DataColumn(label: Text("Observaciones")),
+                      DataColumn(label: Text("Tiempo de espera")),
+                      DataColumn(label: Text("Acciones")),
+                    ],
+                    rows: visibleVouchers.map((voucher) {
+                      return DataRow(cells: [
+                        DataCell(Text(voucher['id_remito_v'].toString())),
+                        DataCell(Text(voucher['Empresa'].toString())),
+                        DataCell(Text(voucher['nombre_pasajero'].toString())),
+                        DataCell(Text('${voucher['Origen']} (${voucher['hora_origen']})')),
+                        DataCell(Text('${voucher['Destino']} (${voucher['hora_destino']})')),
+                        DataCell(Text(voucher['Fecha'].toString())),
+                        DataCell(
+                          voucher['observaciones'] == null 
+                            ? Text("N/A") 
+                            : Container(
+                                width: 200,
+                                child: Text(
+                                  voucher['observaciones'].toString(),
+                                  softWrap: true,
+                                  maxLines: null,
                                 ),
-                          ),
-                          DataCell(
-                              voucher['tiempo_espera'] == null
-                              ? Text("N/A")
-                              : Text(voucher['tiempo_espera'].toString())
-                          ),
-                          DataCell(
-                            Row(
-                              children: [
-                                IconButton(
-                                  icon: Icon(Icons.edit),
-                                  onPressed: () => _editVoucher(voucher),
+                              ),
+                        ),
+                        DataCell(
+                            voucher['tiempo_espera'] == null
+                            ? Text("N/A")
+                            : Text(voucher['tiempo_espera'].toString())
+                        ),
+                        DataCell(
+                          Row(
+                            children: [
+                              IconButton(
+                                icon: Icon(Icons.edit),
+                                onPressed: () => _editVoucher(voucher),
+                              ),
+                              IconButton(
+                                icon: Icon(Icons.delete),
+                                onPressed: () => showDialog(
+                                  context: context,
+                                  builder: (BuildContext context) {
+                                    return AlertDialog(
+                                      title: Text("Eliminar"),
+                                      content: Text("¿Estás seguro de que quieres eliminar el registro (${voucher['id_remito_v']})?"),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.pop(context),
+                                          child: Text("Cancelar"),
+                                        ),
+                                        TextButton(
+                                          onPressed: () {
+                                            Navigator.pop(context);
+                                            _deleteVoucher(voucher);
+                                          },
+                                          child: Text("Eliminar", style: TextStyle(color: Colors.red)),
+                                        ),
+                                      ],
+                                    );
+                                  },
                                 ),
-                                IconButton(
-                                  icon: Icon(Icons.delete),
-                                  onPressed: () => showDialog(
-                                    context: context,
-                                    builder: (BuildContext context) {
-                                      return AlertDialog(
-                                        title: Text("Eliminar"),
-                                        content: Text("¿Estás seguro de que quieres eliminar el registro (${voucher['id_remito_v']})?"),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () => Navigator.pop(context),
-                                            child: Text("Cancelar"),
-                                          ),
-                                          TextButton(
-                                            onPressed: () {
-                                              Navigator.pop(context);
-                                              _deleteVoucher(voucher);
-                                            },
-                                            child: Text("Eliminar", style: TextStyle(color: Colors.red)),
-                                          ),
-                                        ],
-                                      );
-                                    },
-                                  ),
-                                ),
-                              ],
-                            )
-                          ),
-                        ]);
-                      }).toList(),
-                    ),
+                              ),
+                            ],
+                          )
+                        ),
+                      ]);
+                    }).toList(),
                   ),
                 ),
               ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (_visibleRecords < vouchers.length)
-                    ElevatedButton(
-                      onPressed: () {
-                        setState(() {
-                          _visibleRecords += 8;
-                        });
-                      },
-                      child: Text('Ver Más'),
-                    ),
-                  if (_visibleRecords > 8)
-                    ElevatedButton(
-                      onPressed: () {
-                        setState(() {
-                          _visibleRecords = 8;
-                        });
-                      },
-                      child: Text('Ver Menos'),
-                    ),
-                ],
-              ),
-            ],
-          );
-        }
-      },
-    );
-  }
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (_visibleRecords < vouchers.length)
+                  ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        _visibleRecords += 8;
+                      });
+                    },
+                    child: Text('Ver Más'),
+                  ),
+                if (_visibleRecords > 8)
+                  ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        _visibleRecords = 8;
+                      });
+                    },
+                    child: Text('Ver Menos'),
+                  ),
+              ],
+            ),
+          ],
+        );
+      }
+    },
+  );
+}
 
 Widget _buildLocalVouchers() {
   return FutureBuilder<List<Voucher>>(
@@ -552,33 +569,33 @@ Widget _buildLocalVouchers() {
   );
 }
 
-  Future<void> _showUploadConfirmationDialog() async {
-    List<Voucher> pendingVouchers = await DatabaseHelper().getPendingVouchers();
-    int count = pendingVouchers.length;
+Future<void> _showUploadConfirmationDialog() async {
+  List<Voucher> pendingVouchers = await DatabaseHelper().getPendingVouchers();
+  int count = pendingVouchers.length;
 
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Confirmación'),
-          content: Text('Estás por cargar $count vouchers. ¿Estás seguro?'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text('Cancelar'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                _uploadLocalVouchers();
-              },
-              child: Text('Aceptar'),
-            ),
-          ],
-        );
-      },
-    );
-  }
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: Text('Confirmación'),
+        content: Text('Estás por cargar $count vouchers. ¿Estás seguro?'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+            child: Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _uploadLocalVouchers();
+            },
+            child: Text('Aceptar'),
+          ),
+        ],
+      );
+    },
+  );
+}
 }

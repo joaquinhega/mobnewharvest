@@ -8,8 +8,13 @@ import '../db/user.dart';
 import '../db/voucher_dao.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
+import '../utils/connectivity_service.dart' as my_connectivity_service;
+import 'dart:async';
 
 class VoucherForm extends StatefulWidget {
+  final my_connectivity_service.ConnectivityService connectivityService;
+
+  VoucherForm({required this.connectivityService});
   @override
   _VoucherFormState createState() => _VoucherFormState();
 }
@@ -37,11 +42,18 @@ class _VoucherFormState extends State<VoucherForm> {
 
   String letraChofer = '';
   String? signaturePath;
+  bool _isConnected = false;
+  late StreamSubscription<bool> _connectivitySubscription;
 
   @override
   void initState() {
     super.initState();
     _loadLetraChofer();
+    _connectivitySubscription = widget.connectivityService.connectionStatus.listen((isConnected) {
+      setState(() {
+        _isConnected = isConnected;
+      });
+    });
   }
 
   Future<void> _loadLetraChofer() async {
@@ -55,6 +67,7 @@ class _VoucherFormState extends State<VoucherForm> {
 
   @override
   void dispose() {
+    _connectivitySubscription.cancel();
     _signatureController.dispose();
     super.dispose();
   }
@@ -387,15 +400,15 @@ Widget build(BuildContext context) {
                   child: Text('Volver', style: TextStyle(color: Colors.white, fontSize: 14)), //MODIFICADO
                 ),
                 ElevatedButton(
-                  onPressed: _submitForm,
+                  onPressed: _isConnected ? _submitForm : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Color.fromARGB(255, 123, 31, 162),
-                    padding: EdgeInsets.symmetric(vertical: 10, horizontal: 25),//MODIFICADO
+                    padding: EdgeInsets.symmetric(vertical: 10, horizontal: 25),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
-                  child: Text('Confirmar', style: TextStyle(color: Colors.white, fontSize: 14)), //MODIFICADO
+                  child: Text('Confirmar', style: TextStyle(color: Colors.white, fontSize: 14)),
                 ),
               ],
             ),

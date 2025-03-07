@@ -5,8 +5,13 @@ import 'Dashboard.dart';
 import '../utils/session_manager.dart';
 import '../db/database_helper.dart';
 import '../db/user.dart';
+import '../utils/connectivity_service.dart' as my_connectivity_service;
 
 class Login extends StatefulWidget {
+  final my_connectivity_service.ConnectivityService connectivityService;
+
+  Login({required this.connectivityService});
+
   @override
   _LoginState createState() => _LoginState();
 }
@@ -51,7 +56,7 @@ class _LoginState extends State<Login> {
 
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => Dashboard()),
+            MaterialPageRoute(builder: (context) => Dashboard(connectivityService: widget.connectivityService)),
           );
         } else {
           _showSnackbar("Usuario o contraseña incorrectos", Colors.red);

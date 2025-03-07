@@ -5,8 +5,14 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import '../db/database_helper.dart';
 import '../db/user.dart';
 import '../db/combustible_dao.dart';
+import 'dart:async';
+import '../utils/connectivity_service.dart' as my_connectivity_service;
 
 class CombustibleForm extends StatefulWidget {
+  final my_connectivity_service.ConnectivityService connectivityService;
+
+  CombustibleForm({required this.connectivityService});
+
   @override
   _CombustibleFormState createState() => _CombustibleFormState();
 }
@@ -20,11 +26,28 @@ class _CombustibleFormState extends State<CombustibleForm> {
   final TextEditingController fechaController = TextEditingController();
 
   String nombreChofer = '';
+  bool _isConnected = false;
+  late StreamSubscription<bool> _connectivitySubscription;
 
   @override
   void initState() {
     super.initState();
     _loadNombreChofer();
+    _connectivitySubscription = widget.connectivityService.connectionStatus.listen((isConnected) {
+      setState(() {
+        _isConnected = isConnected;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _connectivitySubscription.cancel();
+    remitoController.dispose();
+    montoController.dispose();
+    patenteController.dispose();
+    fechaController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadNombreChofer() async {
@@ -34,15 +57,6 @@ class _CombustibleFormState extends State<CombustibleForm> {
         nombreChofer = user.nombre;
       });
     }
-  }
-
-  @override
-  void dispose() {
-    remitoController.dispose();
-    montoController.dispose();
-    patenteController.dispose();
-    fechaController.dispose();
-    super.dispose();
   }
 
   Future<void> _submitCombustible() async {

@@ -1,38 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:mobnewharvest/utils/connectivity_service.dart' as my_connectivity_service;
 import 'dart:async';
 
 class Header extends StatefulWidget implements PreferredSizeWidget {
   final String title;
+  final my_connectivity_service.ConnectivityService connectivityService;
 
-  Header({required this.title});
+  Header({required this.title, required this.connectivityService});
 
   @override
   _HeaderState createState() => _HeaderState();
-//MODIFICADO
+
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 }
 
 class _HeaderState extends State<Header> {
-  late StreamSubscription<ConnectivityResult> _connectivitySubscription;
-  ConnectivityResult _connectionStatus = ConnectivityResult.none;
-//MODIFICADO
+  late StreamSubscription<bool> _connectivitySubscription;
+  bool _isConnected = false;
+
   @override
   void initState() {
     super.initState();
-    _checkConnectivity();
-    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((ConnectivityResult result) {
+    _connectivitySubscription = widget.connectivityService.connectionStatus.listen((isConnected) {
       setState(() {
-        _connectionStatus = result;
+        _isConnected = isConnected;
       });
-    });
-  }
-
-  Future<void> _checkConnectivity() async {
-    final result = await Connectivity().checkConnectivity();
-    setState(() {
-      _connectionStatus = result;
     });
   }
 
@@ -59,16 +53,16 @@ class _HeaderState extends State<Header> {
             child: Row(
               children: [
                 Icon(
-                  _connectionStatus == ConnectivityResult.none
+                  !_isConnected
                       ? Icons.signal_wifi_off
                       : Icons.wifi,
-                  color: _connectionStatus == ConnectivityResult.none
+                  color: !_isConnected
                       ? Colors.red
                       : Colors.green,
                 ),
                 SizedBox(width: 4.0),
                 Text(
-                  _connectionStatus == ConnectivityResult.none ? "Sin conexión" : "Conectado",
+                  !_isConnected ? "Sin conexión" : "Conectado",
                   style: TextStyle(color: Colors.black),
                 ),
               ],
